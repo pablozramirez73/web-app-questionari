@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Manage Questionnaires</h2>
+        <p class="text-muted mb-0">System-wide questionnaire administration</p>
+    </div>
+    <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-6">
+                <input type="text" class="form-control" name="search" 
+                       placeholder="Search questionnaires..." 
+                       value="{{ search }}">
+            </div>
+            <div class="col-md-4">
+                <select name="filter_by" class="form-select">
+                    <option value="all"{% if filter_by == 'all' %} selected{% endif %}>All Questionnaires</option>
+                    <option value="active"{% if filter_by == 'active' %} selected{% endif %}>Active Only</option>
+                    <option value="inactive"{% if filter_by == 'inactive' %} selected{% endif %}>Inactive Only</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Questionnaires Table -->
+<div class="card">
+    <div class="card-body">
+        {% if questionnaires.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Questionnaire</th>
+                            <th>Creator</th>
+                            <th>Status</th>
+                            <th>Questions</th>
+                            <th>Responses</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for questionnaire in questionnaires.items %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>
+                                            <a href="{{ url_for('main.view_questionnaire', id=questionnaire.id) }}" 
+                                               class="text-decoration-none">
+                                                {{ questionnaire.title }}
+                                            </a>
+                                        </strong>
+                                        {% if questionnaire.description %}
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ questionnaire.description[:60] }}
+                                                {% if questionnaire.description|length > 60 %}...{% endif %}
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{ questionnaire.creator.get_full_name() }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ questionnaire.creator.email }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if questionnaire.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                    
+                                    {% if questionnaire.allow_anonymous %}
+                                        <br><span class="badge bg-info mt-1">Public</span>
+                                    {% endif %}
+                                    
+                                    {% if questionnaire.multiple_submissions %}
+                                        <br><span class="badge bg-warning mt-1">Multiple</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-primary">{{ questionnaire.get_question_count() }}</span>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-success">{{ questionnaire.get_total_responses() }}</span>
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ "%.1f"|format(questionnaire.get_completion_rate()) }}% complete
+                                    </small>
+                                </td>
+                                <td>
+                                    <small>{{ questionnaire.created_at.strftime('%b %d, %Y') }}</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <!-- View -->
+                                        <a href="{{ url_for('main.view_questionnaire', id=questionnaire.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="View Questionnaire">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        
+                                        <!-- Analytics -->
+                                        <a href="{{ url_for('main.questionnaire_analytics', id=questionnaire.id) }}" 
+                                           class="btn btn-sm btn-outline-info" title="View Analytics">
+                                            <i class="bi bi-bar-chart"></i>
+                                        </a>
+                                        
+                                        <!-- Toggle Active -->
+                                        <form method="POST" action="{{ url_for('admin.toggle_questionnaire_active', id=questionnaire.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if questionnaire.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}" 
+                                                    title="{% if questionnaire.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                <i class="bi {% if questionnaire.is_active %}bi-pause{% else %}bi-play{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                        
+                                        <!-- Delete -->
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                onclick="confirmDeleteQuestionnaire({{ questionnaire.id }}, '{{ questionnaire.title|replace("'", "\\'") }}')" 
+                                                title="Delete Questionnaire">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-clipboard-x text-muted" style="font-size: 3rem;"></i>
+                <h5 class="text-muted mt-3">No questionnaires found</h5>
+                {% if search %}
+                    <p class="text-muted">No questionnaires match your search criteria.</p>
+                    <a href="{{ url_for('admin.manage_questionnaires') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-clockwise"></i> Clear Search
+                    </a>
+                {% else %}
+                    <p class="text-muted">No questionnaires in the system yet.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if questionnaires.pages > 1 %}
+    <nav aria-label="Questionnaires pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if questionnaires.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.manage_questionnaires', page=questionnaires.prev_num, search=search, filter_by=filter_by) }}">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="bi bi-chevron-left"></i> Previous</span>
+                </li>
+            {% endif %}
+            
+            {% for page_num in questionnaires.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != questionnaires.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.manage_questionnaires', page=page_num, search=search, filter_by=filter_by) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">…</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if questionnaires.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.manage_questionnaires', page=questionnaires.next_num, search=search, filter_by=filter_by) }}">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next <i class="bi bi-chevron-right"></i></span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+
+<!-- Delete Questionnaire Modal -->
+<div class="modal fade" id="deleteQuestionnaireModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Questionnaire Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete "<span id="deleteQuestionnaireTitle"></span>"?</p>
+                <div class="alert alert-danger">
+                    <strong>Warning:</strong> This will permanently delete all questions and responses associated with this questionnaire.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteQuestionnaireForm" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">Delete Questionnaire</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDeleteQuestionnaire(questionnaireId, title) {
+    document.getElementById('deleteQuestionnaireTitle').textContent = title;
+    document.getElementById('deleteQuestionnaireForm').action = '/admin/questionnaire/' + questionnaireId + '/delete';
+    new bootstrap.Modal(document.getElementById('deleteQuestionnaireModal')).show();
+}
+
+// Initialize tooltips
+$(document).ready(function() {
+    $('[title]').each(function() {
+        new bootstrap.Tooltip(this);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Manage Responses</h2>
+        <p class="text-muted mb-0">System-wide response monitoring</p>
+    </div>
+    <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<!-- Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-10">
+                <select name="questionnaire_id" class="form-select">
+                    <option value="">All Questionnaires</option>
+                    {% for questionnaire in questionnaires %}
+                        <option value="{{ questionnaire.id }}"{% if selected_questionnaire == questionnaire.id %} selected{% endif %}>
+                            {{ questionnaire.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-filter"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Responses Table -->
+<div class="card">
+    <div class="card-body">
+        {% if responses.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Questionnaire</th>
+                            <th>Respondent</th>
+                            <th>Submitted</th>
+                            <th>Progress</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for response in responses.items %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-primary">#{{ response.id }}</span>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>
+                                            <a href="{{ url_for('main.view_questionnaire', id=response.questionnaire.id) }}" 
+                                               class="text-decoration-none">
+                                                {{ response.questionnaire.title }}
+                                            </a>
+                                        </strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            By {{ response.questionnaire.creator.get_full_name() }}
+                                        </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{ response.get_respondent_name() }}</strong>
+                                        {% if response.user %}
+                                            <br><small class="text-muted">{{ response.user.email }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        {{ response.submitted_at.strftime('%b %d, %Y') }}
+                                        <br>
+                                        <small class="text-muted">{{ response.submitted_at.strftime('%I:%M %p') }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% set progress = response.get_progress_percentage() %}
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-success" style="width: {{ progress }}%">
+                                            {{ "%.0f"|format(progress) }}%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">
+                                        {{ response.answers.count() }}/{{ response.questionnaire.get_question_count() }} answered
+                                    </small>
+                                </td>
+                                <td>
+                                    <button class="btn btn-outline-primary btn-sm" 
+                                            onclick="viewResponseDetails({{ response.id }})">
+                                        <i class="bi bi-eye"></i> Details
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                <h5 class="text-muted mt-3">No responses found</h5>
+                {% if selected_questionnaire %}
+                    <p class="text-muted">No responses for the selected questionnaire.</p>
+                {% else %}
+                    <p class="text-muted">No responses in the system yet.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if responses.pages > 1 %}
+    <nav aria-label="Responses pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if responses.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.manage_responses', page=responses.prev_num, questionnaire_id=selected_questionnaire) }}">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="bi bi-chevron-left"></i> Previous</span>
+                </li>
+            {% endif %}
+            
+            {% for page_num in responses.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != responses.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.manage_responses', page=page_num, questionnaire_id=selected_questionnaire) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">…</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if responses.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.manage_responses', page=responses.next_num, questionnaire_id=selected_questionnaire) }}">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next <i class="bi bi-chevron-right"></i></span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+
+<!-- Response Details Modal -->
+<div class="modal fade" id="responseDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Response Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="responseDetailsBody">
+                <div class="text-center">
+                    <div class="spinner-border" role="status"></div>
+                    <p class="mt-2">Loading response details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function viewResponseDetails(responseId) {
+    $('#responseDetailsBody').html(`
+        <div class="text-center">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2">Loading response details...</p>
+        </div>
+    `);
+    
+    const modal = new bootstrap.Modal(document.getElementById('responseDetailsModal'));
+    modal.show();
+    
+    // Load response details
+    $.get(`/api/response/${responseId}/answers`)
+        .done(function(data) {
+            let html = `
+                <div class="mb-3">
+                    <h6>Response #${data.response_id}</h6>
+                    <small class="text-muted">Submitted: ${new Date(data.submitted_at).toLocaleString()}</small>
+                </div>
+                <div class="list-group">
+            `;
+            
+            let questionIndex = 1;
+            Object.entries(data.answers).forEach(function([questionId, answer]) {
+                html += `
+                    <div class="list-group-item">
+                        <div class="fw-bold mb-2">Question ${questionIndex}</div>
+                        <div class="ps-3">
+                `;
+                
+                if (answer !== undefined && answer !== null && answer !== '') {
+                    if (Array.isArray(answer)) {
+                        answer.forEach(function(value) {
+                            html += `<span class="badge bg-success me-1">${value}</span>`;
+                        });
+                    } else {
+                        html += `<span class="badge bg-primary">${answer}</span>`;
+                    }
+                } else {
+                    html += `<small class="text-muted">No answer provided</small>`;
+                }
+                
+                html += `</div></div>`;
+                questionIndex++;
+            });
+            
+            html += '</div>';
+            $('#responseDetailsBody').html(html);
+        })
+        .fail(function() {
+            $('#responseDetailsBody').html(`
+                <div class="alert alert-danger">
+                    Failed to load response details.
+                </div>
+            `);
+        });
+}
+</script>
+{% endblock %}
