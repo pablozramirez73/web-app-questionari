@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>User: {{ user.username }}</h1>
+    <p>Email: {{ user.email }}</p>
+    <hr>
+    <h3>My Questionnaires</h3>
+    {% for questionnaire in questionnaires %}
+        <div class="card" style="margin-bottom: 1rem;">
+            <div class="card-body">
+                <h5 class="card-title"><a href="{{ url_for('main.questionnaire', questionnaire_id=questionnaire.id) }}">{{ questionnaire.title }}</a></h5>
+                <p class="card-text">{{ questionnaire.description }}</p>
+                <a href="{{ url_for('main.questionnaire_results', questionnaire_id=questionnaire.id) }}" class="btn btn-info">View Results</a>
+            </div>
+        </div>
+    {% else %}
+        <p>You have not created any questionnaires yet.</p>
+    {% endfor %}
+{% endblock %}
