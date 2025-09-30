@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}About - Questionnaire App{% endblock %}
+
+{% block content %}
+<div class="about-section">
+    <h1>About Questionnaire App</h1>
+    <p>This is a Flask-based web application for creating and managing questionnaires.</p>
+    
+    <h2>Technology Stack</h2>
+    <ul>
+        <li><strong>Backend:</strong> Flask (Python web framework)</li>
+        <li><strong>Frontend:</strong> HTML, CSS, JavaScript</li>
+        <li><strong>API:</strong> RESTful API endpoints</li>
+    </ul>
+    
+    <h2>Features</h2>
+    <ul>
+        <li>Create and manage questionnaires</li>
+        <li>RESTful API for CRUD operations</li>
+        <li>Responsive web interface</li>
+        <li>Store and retrieve responses</li>
+    </ul>
+    
+    <h2>API Endpoints</h2>
+    <div class="api-docs">
+        <h3>GET /api/questions</h3>
+        <p>Retrieve all questionnaires</p>
+        
+        <h3>POST /api/questions</h3>
+        <p>Create a new questionnaire</p>
+        
+        <h3>GET /api/questions/&lt;id&gt;</h3>
+        <p>Retrieve a specific questionnaire</p>
+        
+        <h3>PUT /api/questions/&lt;id&gt;</h3>
+        <p>Update a questionnaire</p>
+        
+        <h3>DELETE /api/questions/&lt;id&gt;</h3>
+        <p>Delete a questionnaire</p>
+        
+        <h3>GET /api/responses</h3>
+        <p>Retrieve all responses</p>
+        
+        <h3>POST /api/responses</h3>
+        <p>Submit a response</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Questionnaire App{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Welcome to Questionnaire App</h1>
+    <p>Create, manage, and share questionnaires easily</p>
+    <div class="hero-buttons">
+        <a href="/questionnaires" class="btn btn-primary">View Questionnaires</a>
+        <button class="btn btn-secondary" onclick="createNewQuestionnaire()">Create New</button>
+    </div>
+</div>
+
+<div class="features">
+    <h2>Features</h2>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h3>📝 Easy Creation</h3>
+            <p>Create questionnaires with multiple question types</p>
+        </div>
+        <div class="feature-card">
+            <h3>💾 Data Storage</h3>
+            <p>Store and manage questionnaire responses</p>
+        </div>
+        <div class="feature-card">
+            <h3>🔌 API Access</h3>
+            <p>RESTful API for integration with other systems</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

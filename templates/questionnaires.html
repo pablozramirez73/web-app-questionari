@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Questionnaires - Questionnaire App{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Questionnaires</h1>
+    <button class="btn btn-primary" onclick="createNewQuestionnaire()">Create New</button>
+</div>
+
+<div class="questionnaires-list">
+    {% if questions %}
+        {% for question in questions %}
+        <div class="questionnaire-card">
+            <h3>{{ question.title }}</h3>
+            <p>{{ question.description }}</p>
+            <div class="card-actions">
+                <button class="btn btn-small" onclick="viewQuestionnaire({{ question.id }})">View</button>
+                <button class="btn btn-small btn-danger" onclick="deleteQuestionnaire({{ question.id }})">Delete</button>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <p>No questionnaires yet. Create your first one!</p>
+        </div>
+    {% endif %}
+</div>
+
+<div id="createModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Create New Questionnaire</h2>
+        <form id="questionnaireForm">
+            <div class="form-group">
+                <label for="title">Title:</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" rows="4" required></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Create</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
