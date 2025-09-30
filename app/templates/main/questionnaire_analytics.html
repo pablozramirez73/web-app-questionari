@@ -117,15 +117,11 @@
                         <small class="text-muted">Anonymous</small>
                     </div>
                     <div class="col-6">
-                        <div class="fw-bold text-success fs-4">
-                            {{ "%.1f"|format(completion_rate) }}%
-                        </div>
-                        <small class="text-muted">Avg. Completion</small>
+                        <div class="fw-bold text-success fs-4">{{ "%.1f"|format(completion_rate) }}%</div>
+                        <small class="text-muted">Completion Rate</small>
                     </div>
                     <div class="col-6">
-                        <div class="fw-bold text-info fs-4">
-                            {{ questionnaire.questions.count() }}
-                        </div>
+                        <div class="fw-bold text-info fs-4">{{ questionnaire.questions.count() }}</div>
                         <small class="text-muted">Total Questions</small>
                     </div>
                 </div>
@@ -281,7 +277,7 @@ const chartColors = [
 
 // Response Timeline Chart
 {% if timeline_data %}
-const timelineLabels = [{% for data in timeline_data %}'{{ data.date.strftime("%m/%d") }}'{{ ',' if not loop.last }}{% endfor %}];
+const timelineLabels = [{% for data in timeline_data %}'{{ data.date_str }}'{{ ',' if not loop.last }}{% endfor %}];
 const timelineData = [{% for data in timeline_data %}{{ data.count }}{{ ',' if not loop.last }}{% endfor %}];
 
 const timelineChart = new Chart(document.getElementById('timelineChart'), {
