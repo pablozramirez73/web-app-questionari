@@ -46,6 +46,9 @@ def create_app(config_name=None):
     from app.admin import bp as admin_bp
     app.register_blueprint(admin_bp, url_prefix='/admin')
     
+    # Exempt API blueprint from CSRF protection
+    csrf.exempt(api_bp)
+    
     # Configure logging
     if not app.debug and not app.testing:
         # Create logs directory if it doesn't exist

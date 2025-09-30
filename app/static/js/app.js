@@ -100,6 +100,7 @@ function initQuestionnaireBuilder() {
         const questionCount = $('.question-item').length + 1;
         
         const newQuestion = createQuestionHTML(questionCount);
+        newQuestion.attr('data-questionnaire-id', questionnaireId);
         $('#questions-container').append(newQuestion);
         newQuestion.addClass('fade-in');
     });
@@ -324,12 +325,28 @@ function performSearch(query) {
 
 // API Helper Functions
 function saveQuestion(questionItem) {
+    // Get questionnaire ID from the hidden input or data attribute
+    const questionnaireId = $('#questionnaire-id').val() || questionItem.closest('[data-questionnaire-id]').data('questionnaire-id');
+    
+    if (!questionnaireId) {
+        showAlert('Questionnaire ID not found. Please refresh the page.', 'danger');
+        return;
+    }
+    
+    // Validate required fields
+    const questionText = questionItem.find('.question-text').val().trim();
+    if (!questionText) {
+        showAlert('Question text is required.', 'warning');
+        questionItem.find('.question-text').focus();
+        return;
+    }
+    
     const questionData = {
-        questionnaire_id: $('#questionnaire-id').val(),
-        question_text: questionItem.find('.question-text').val(),
+        questionnaire_id: parseInt(questionnaireId),
+        question_text: questionText,
         question_type: questionItem.find('.question-type-select').val(),
         is_required: questionItem.find('.question-required').is(':checked'),
-        order: questionItem.data('order')
+        order: questionItem.data('order') || 0
     };
     
     // Collect options for choice questions
@@ -341,12 +358,20 @@ function saveQuestion(questionItem) {
                 options.push(optionText);
             }
         });
+        
+        if (options.length < 2) {
+            showAlert('Please provide at least 2 options for choice questions.', 'warning');
+            return;
+        }
+        
         questionData.options = options;
     }
     
     const questionId = questionItem.data('question-id');
     const method = questionId ? 'PUT' : 'POST';
     const url = questionId ? `/api/questions/${questionId}` : '/api/questions';
+    
+    console.log('Saving question:', questionData); // Debug log
     
     showLoading();
     
@@ -358,18 +383,28 @@ function saveQuestion(questionItem) {
         success: function(response) {
             hideLoading();
             questionItem.data('question-id', response.id);
-            questionItem.addClass('border-success');
+            questionItem.addClass('border border-success');
             
             setTimeout(function() {
-                questionItem.removeClass('border-success');
+                questionItem.removeClass('border border-success');
             }, 2000);
             
             showAlert('Question saved successfully!', 'success');
         },
-        error: function(xhr) {
+        error: function(xhr, status, error) {
             hideLoading();
-            const error = xhr.responseJSON ? xhr.responseJSON.error : 'Failed to save question';
-            showAlert(error, 'danger');
+            console.error('AJAX Error:', xhr.responseText, status, error); // Debug log
+            
+            let errorMessage = 'Failed to save question';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            } else if (xhr.responseText) {
+                errorMessage = xhr.responseText;
+            } else if (error) {
+                errorMessage = error;
+            }
+            
+            showAlert(errorMessage, 'danger');
         }
     });
 }
