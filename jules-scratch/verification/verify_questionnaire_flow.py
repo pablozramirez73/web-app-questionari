@@ -46,15 +46,15 @@ def run(playwright):
 
     # Add first choice
     q1.get_by_role("button", name="Add Choice").click()
-    q1.locator(".choices").get_by_label("Choice Text").nth(0).fill("Red")
+    q1.locator(".choices").get_by_placeholder("Choice Text").nth(0).fill("Red")
 
     # Add second choice
     q1.get_by_role("button", name="Add Choice").click()
-    q1.locator(".choices").get_by_label("Choice Text").nth(1).fill("Green")
+    q1.locator(".choices").get_by_placeholder("Choice Text").nth(1).fill("Green")
 
     # Add third choice
     q1.get_by_role("button", name="Add Choice").click()
-    q1.locator(".choices").get_by_label("Choice Text").nth(2).fill("Blue")
+    q1.locator(".choices").get_by_placeholder("Choice Text").nth(2).fill("Blue")
 
     # Add and fill Question 2 - Multiple Choice
     page.get_by_role("button", name="Add Question").click()
@@ -62,9 +62,9 @@ def run(playwright):
     q2.get_by_label("Question Text").fill("Which languages do you know?")
     q2.get_by_label("Question Type").select_option("multiple_choice")
     q2.get_by_role("button", name="Add Choice").click()
-    q2.locator(".choices").get_by_label("Choice Text").nth(0).fill("Python")
+    q2.locator(".choices").get_by_placeholder("Choice Text").nth(0).fill("Python")
     q2.get_by_role("button", name="Add Choice").click()
-    q2.locator(".choices").get_by_label("Choice Text").nth(1).fill("JavaScript")
+    q2.locator(".choices").get_by_placeholder("Choice Text").nth(1).fill("JavaScript")
 
     # Add and fill Question 3 - Open-Ended
     page.get_by_role("button", name="Add Question").click()
@@ -82,7 +82,7 @@ def run(playwright):
     page.get_by_role("button", name="Create Questionnaire").click()
 
     # --- Verify Questionnaire Page ---
-    expect(page).to_have_url(re.compile(".*\/questionnaire\/1"))
+    expect(page).to_have_url(re.compile(".*\/questionnaire\/[0-9]+"))
     expect(page.get_by_role("heading", name="My Test Questionnaire")).to_be_visible()
     expect(page.get_by_text("This is a test questionnaire created by an automated script.")).to_be_visible()
 

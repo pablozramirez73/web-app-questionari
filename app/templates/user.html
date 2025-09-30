@@ -1,19 +1,22 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>User: {{ user.username }}</h1>
-    <p>Email: {{ user.email }}</p>
-    <hr>
-    <h3>My Questionnaires</h3>
+    <h1 class="display-4">User: {{ user.username }}</h1>
+    <p class="lead">Email: {{ user.email }}</p>
+    <hr class="my-4">
+    <h2 class="mt-5">My Questionnaires</h2>
     {% for questionnaire in questionnaires %}
-        <div class="card" style="margin-bottom: 1rem;">
+        <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title"><a href="{{ url_for('main.questionnaire', questionnaire_id=questionnaire.id) }}">{{ questionnaire.title }}</a></h5>
+                <h5 class="card-title">
+                    <a href="{{ url_for('main.questionnaire', questionnaire_id=questionnaire.id) }}" class="text-decoration-none">{{ questionnaire.title }}</a>
+                </h5>
                 <p class="card-text">{{ questionnaire.description }}</p>
                 <a href="{{ url_for('main.questionnaire_results', questionnaire_id=questionnaire.id) }}" class="btn btn-info">View Results</a>
+                <a href="{{ url_for('main.questionnaire_analysis', questionnaire_id=questionnaire.id) }}" class="btn btn-success">View Analysis</a>
             </div>
         </div>
     {% else %}
-        <p>You have not created any questionnaires yet.</p>
+        <p class="lead">You have not created any questionnaires yet.</p>
     {% endfor %}
 {% endblock %}

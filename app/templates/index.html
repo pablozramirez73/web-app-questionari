@@ -1,20 +1,23 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Hi, {{ current_user.username if current_user.is_authenticated else 'Guest' }}!</h1>
+    <h1 class="display-4">Hi, {{ current_user.username if current_user.is_authenticated else 'Guest' }}!</h1>
 
     {% if current_user.is_authenticated %}
-        <p><a href="{{ url_for('main.create_questionnaire') }}" class="btn btn-primary">Create New Questionnaire</a></p>
-        <hr>
+        <p class="my-4">
+            <a href="{{ url_for('main.create_questionnaire') }}" class="btn btn-primary">Create New Questionnaire</a>
+        </p>
     {% else %}
-        <p>Please <a href="{{ url_for('auth.login') }}">log in</a> to create and answer questionnaires.</p>
+        <p class="lead">Please <a href="{{ url_for('auth.login') }}">log in</a> to create and answer questionnaires.</p>
     {% endif %}
 
-    <h2>All Questionnaires</h2>
+    <h2 class="mt-5">All Questionnaires</h2>
     {% for questionnaire in questionnaires %}
-        <div class="card" style="margin-bottom: 1rem;">
+        <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title"><a href="{{ url_for('main.questionnaire', questionnaire_id=questionnaire.id) }}">{{ questionnaire.title }}</a></h5>
+                <h5 class="card-title">
+                    <a href="{{ url_for('main.questionnaire', questionnaire_id=questionnaire.id) }}" class="text-decoration-none">{{ questionnaire.title }}</a>
+                </h5>
                 <p class="card-text">{{ questionnaire.description }}</p>
                 <p class="card-text"><small class="text-muted">by {{ questionnaire.author.username }}</small></p>
             </div>

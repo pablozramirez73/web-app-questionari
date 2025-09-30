@@ -1,23 +1,29 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Analysis for: {{ questionnaire.title }}</h1>
-    <p>{{ questionnaire.description }}</p>
-    <hr>
+    <h1 class="display-6">Analysis for: {{ questionnaire.title }}</h1>
+    <p class="lead">{{ questionnaire.description }}</p>
+    <hr class="my-4">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <div class="row">
     {% for chart_data in charts_data %}
-        <div style="width: 50%; margin: auto;">
-            <h3>{{ chart_data.question_text }}</h3>
-            <canvas id="{{ chart_data.chart_id }}"></canvas>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">{{ chart_data.question_text }}</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="{{ chart_data.chart_id }}"></canvas>
+                </div>
+            </div>
         </div>
-        <hr>
 
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 var ctx = document.getElementById('{{ chart_data.chart_id }}').getContext('2d');
-                var myChart = new Chart(ctx, {
+                new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: {{ chart_data.labels|tojson }},
@@ -37,14 +43,22 @@
                                     stepSize: 1
                                 }
                             }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
                         }
                     }
                 });
             });
         </script>
     {% else %}
-        <p>No data available for analysis.</p>
+        <p class="text-center text-muted">No data available for analysis.</p>
     {% endfor %}
+    </div>
 
-    <a href="{{ url_for('main.questionnaire_results', questionnaire_id=questionnaire.id) }}" class="btn btn-primary">Back to Results</a>
+    <div class="text-center mt-4">
+        <a href="{{ url_for('main.questionnaire_results', questionnaire_id=questionnaire.id) }}" class="btn btn-secondary">Back to Results</a>
+    </div>
 {% endblock %}
