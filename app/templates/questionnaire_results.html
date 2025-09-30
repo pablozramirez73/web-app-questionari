@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Results for: {{ questionnaire.title }}</h1>
+    <p>{{ questionnaire.description }}</p>
+    <hr>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>User</th>
+                {% for question in questionnaire.questions.order_by('id') %}
+                    <th>{{ question.text }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for user_id, user_answers in results.items() %}
+                <tr>
+                    <td>{{ users[user_id].username }}</td>
+                    {% for question in questionnaire.questions.order_by('id') %}
+                        <td>
+                            {% if question.id in user_answers %}
+                                {{ user_answers[question.id]|join(', ') }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="{{ questionnaire.questions.count() + 1 }}">No responses yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="{{ url_for('main.user', username=current_user.username) }}" class="btn btn-primary">Back to Profile</a>
+    <a href="{{ url_for('main.questionnaire_analysis', questionnaire_id=questionnaire.id) }}" class="btn btn-success">View Analysis</a>
+{% endblock %}

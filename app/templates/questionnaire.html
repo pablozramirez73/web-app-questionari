@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>{{ questionnaire.title }}</h1>
+    <p>{{ questionnaire.description }}</p>
+    <p><i>by {{ questionnaire.author.username }}</i></p>
+    <hr>
+    <form action="{{ url_for('main.submit_questionnaire', questionnaire_id=questionnaire.id) }}" method="post">
+        {% for question in questionnaire.questions %}
+            <h4>{{ question.text }}</h4>
+            {% if question.question_type == 'open_ended' %}
+                <textarea name="question_{{ question.id }}" class="form-control"></textarea>
+            {% elif question.question_type == 'scale' %}
+                {% for i in range(1, 6) %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" id="q{{ question.id }}_{{ i }}" value="{{ i }}">
+                    <label class="form-check-label" for="q{{ question.id }}_{{ i }}">{{ i }}</label>
+                </div>
+                {% endfor %}
+            {% elif question.question_type == 'single_choice' %}
+                {% for choice in question.choices %}
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" id="c{{ choice.id }}" value="{{ choice.id }}">
+                    <label class="form-check-label" for="c{{ choice.id }}">
+                        {{ choice.text }}
+                    </label>
+                </div>
+                {% endfor %}
+            {% elif question.question_type == 'multiple_choice' %}
+                 {% for choice in question.choices %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="question_{{ question.id }}" id="c{{ choice.id }}" value="{{ choice.id }}">
+                    <label class="form-check-label" for="c{{ choice.id }}">
+                        {{ choice.text }}
+                    </label>
+                </div>
+                {% endfor %}
+            {% endif %}
+            <br>
+        {% endfor %}
+        <hr>
+        <input type="submit" value="Submit Answers" class="btn btn-primary">
+    </form>
+{% endblock %}

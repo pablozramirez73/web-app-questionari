@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Create Questionnaire</h1>
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.title.label }}
+            {{ form.title(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.description.label }}
+            {{ form.description(class="form-control") }}
+        </div>
+        <hr>
+        <h2>Questions</h2>
+        <div id="questions">
+            {% for question in form.questions %}
+                <div class="question">
+                    {{ question.text.label }} {{ question.text(class="form-control") }}
+                    {{ question.question_type.label }} {{ question.question_type(class="form-control question-type") }}
+                    <div class="choices">
+                        {% for choice in question.choices %}
+                            {{ choice.text.label }} {{ choice.text(class="form-control") }}
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="add-choice">Add Choice</button>
+                    <hr>
+                </div>
+            {% endfor %}
+        </div>
+        <button type="button" id="add-question">Add Question</button>
+        <hr>
+        {{ form.submit(class="btn btn-primary") }}
+    </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let questionCount = {{ form.questions|length }};
+            const questionsContainer = document.getElementById('questions');
+
+            document.getElementById('add-question').addEventListener('click', function() {
+                const questionIndex = questionCount++;
+                const questionHTML = `
+                    <div class="question">
+                        <div class="form-group">
+                            <label for="questions-${questionIndex}-text">Question Text</label>
+                            <input class="form-control" id="questions-${questionIndex}-text" name="questions-${questionIndex}-text" type="text" value="">
+                        </div>
+                        <div class="form-group">
+                            <label for="questions-${questionIndex}-question_type">Question Type</label>
+                            <select class="form-control question-type" id="questions-${questionIndex}-question_type" name="questions-${questionIndex}-question_type">
+                                <option value="single_choice">Single Choice</option>
+                                <option value="multiple_choice">Multiple Choice</option>
+                                <option value="open_ended">Open-Ended</option>
+                                <option value="scale">Scale (1-5)</option>
+                            </select>
+                        </div>
+                        <div class="choices"></div>
+                        <button type="button" class="add-choice">Add Choice</button>
+                        <hr>
+                    </div>
+                `;
+                questionsContainer.insertAdjacentHTML('beforeend', questionHTML);
+            });
+
+            questionsContainer.addEventListener('click', function(e) {
+                if (e.target.classList.contains('add-choice')) {
+                    const questionDiv = e.target.closest('.question');
+                    const choicesDiv = questionDiv.querySelector('.choices');
+                    const questionIndex = Array.from(questionsContainer.children).indexOf(questionDiv);
+                    const choiceIndex = choicesDiv.children.length;
+                    const choiceHTML = `
+                        <div class="form-group">
+                            <label for="questions-${questionIndex}-choices-${choiceIndex}-text">Choice Text</label>
+                            <input class="form-control" id="questions-${questionIndex}-choices-${choiceIndex}-text" name="questions-${questionIndex}-choices-${choiceIndex}-text" type="text" value="">
+                        </div>
+                    `;
+                    choicesDiv.insertAdjacentHTML('beforeend', choiceHTML);
+                }
+            });
+
+            questionsContainer.addEventListener('change', function(e) {
+                if (e.target.classList.contains('question-type')) {
+                    const questionDiv = e.target.closest('.question');
+                    const choicesDiv = questionDiv.querySelector('.choices');
+                    const addChoiceButton = questionDiv.querySelector('.add-choice');
+                    if (e.target.value === 'open_ended' || e.target.value === 'scale') {
+                        choicesDiv.innerHTML = '';
+                        addChoiceButton.style.display = 'none';
+                    } else {
+                        addChoiceButton.style.display = 'block';
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}

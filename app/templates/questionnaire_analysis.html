@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Analysis for: {{ questionnaire.title }}</h1>
+    <p>{{ questionnaire.description }}</p>
+    <hr>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {% for chart_data in charts_data %}
+        <div style="width: 50%; margin: auto;">
+            <h3>{{ chart_data.question_text }}</h3>
+            <canvas id="{{ chart_data.chart_id }}"></canvas>
+        </div>
+        <hr>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var ctx = document.getElementById('{{ chart_data.chart_id }}').getContext('2d');
+                var myChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: {{ chart_data.labels|tojson }},
+                        datasets: [{
+                            label: '# of Votes',
+                            data: {{ chart_data.data|tojson }},
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        </script>
+    {% else %}
+        <p>No data available for analysis.</p>
+    {% endfor %}
+
+    <a href="{{ url_for('main.questionnaire_results', questionnaire_id=questionnaire.id) }}" class="btn btn-primary">Back to Results</a>
+{% endblock %}
