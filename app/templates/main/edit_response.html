@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Response Header -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h2 class="h4 mb-2">Edit Response</h2>
+                        <h3 class="h5 text-primary">{{ questionnaire.title }}</h3>
+                        {% if questionnaire.description %}
+                            <p class="text-muted">{{ questionnaire.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-info mb-2">Response #{{ response.id }}</span>
+                        <br>
+                        <small class="text-muted">
+                            Originally submitted: {{ response.submitted_at.strftime('%b %d, %Y at %I:%M %p') }}
+                        </small>
+                        {% if response.updated_at != response.submitted_at %}
+                            <br>
+                            <small class="text-muted">
+                                Last updated: {{ response.updated_at.strftime('%b %d, %Y at %I:%M %p') }}
+                            </small>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="fw-bold">{{ response.get_respondent_name() }}</div>
+                        <small class="text-muted">Respondent</small>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="fw-bold">{{ questionnaire.get_question_count() }}</div>
+                        <small class="text-muted">Total Questions</small>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="fw-bold">{{ response.answers.count() }}</div>
+                        <small class="text-muted">Answered</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Response Form -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Answers
+                </h5>
+            </div>
+            <div class="card-body response-form">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Note:</strong> You can modify any of your previous answers below. 
+                    Changes will be saved when you submit the form.
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="progress-container mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">Progress</small>
+                        <small class="text-muted" id="progress-text">{{ response.answers.count() }} of {{ questionnaire.get_question_count() }} questions answered</small>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" id="progress-bar" role="progressbar" 
+                             style="width: {{ response.get_progress_percentage() }}%" 
+                             aria-valuenow="{{ response.get_progress_percentage() }}" 
+                             aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                
+                <form method="POST">
+                    {% for question in questionnaire.questions.order_by('order') %}
+                        <div class="question-container" data-question-id="{{ question.id }}" data-required="{{ question.is_required|lower }}">
+                            <div class="question-text">
+                                {{ question.question_text }}
+                                {% if question.is_required %}
+                                    <span class="required-indicator">*</span>
+                                {% endif %}
+                                <span class="badge bg-secondary ms-2">{{ question.question_type.replace('_', ' ').title() }}</span>
+                            </div>
+                            
+                            {% set current_answer = current_answers.get(question.id) %}
+                            
+                            {% if question.question_type == 'single_choice' %}
+                                <div class="mt-3">
+                                    {% for option in question.get_options_list() %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" 
+                                                   name="question_{{ question.id }}" 
+                                                   value="{{ option }}" 
+                                                   id="q{{ question.id }}_{{ loop.index }}"
+                                                   {% if current_answer == option %}checked{% endif %}>
+                                            <label class="form-check-label" for="q{{ question.id }}_{{ loop.index }}">
+                                                {{ option }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            
+                            {% elif question.question_type == 'multiple_choice' %}
+                                <div class="mt-3">
+                                    {% for option in question.get_options_list() %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   name="question_{{ question.id }}" 
+                                                   value="{{ option }}" 
+                                                   id="q{{ question.id }}_{{ loop.index }}"
+                                                   {% if current_answer and option in current_answer %}checked{% endif %}>
+                                            <label class="form-check-label" for="q{{ question.id }}_{{ loop.index }}">
+                                                {{ option }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            
+                            {% elif question.question_type == 'open_ended' %}
+                                <div class="mt-3">
+                                    <textarea class="form-control" 
+                                              name="question_{{ question.id }}" 
+                                              rows="4" 
+                                              placeholder="Enter your answer here...">{{ current_answer or '' }}</textarea>
+                                </div>
+                            
+                            {% elif question.question_type == 'scale' %}
+                                <div class="scale-options">
+                                    {% for i in range(1, 6) %}
+                                        <div class="scale-option">
+                                            <input class="form-check-input" type="radio" 
+                                                   name="question_{{ question.id }}" 
+                                                   value="{{ i }}" 
+                                                   id="q{{ question.id }}_scale_{{ i }}"
+                                                   {% if current_answer == i|string %}checked{% endif %}>
+                                            <label class="scale-label" for="q{{ question.id }}_scale_{{ i }}">{{ i }}</label>
+                                        </div>
+                                    {% endfor %}
+                                    <div class="d-flex justify-content-between mt-2">
+                                        <small class="text-muted">Strongly Disagree</small>
+                                        <small class="text-muted">Strongly Agree</small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('main.questionnaire_responses', id=questionnaire.id) }}" 
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-save me-2"></i>Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Update progress on form changes
+    updateProgress();
+    $('input, textarea').on('change input', updateProgress);
+    
+    // Form validation before submit
+    $('form').on('submit', function(e) {
+        let isValid = true;
+        
+        $('.question-container').each(function() {
+            const isRequired = $(this).data('required') === true;
+            let hasAnswer = false;
+            
+            const inputs = $(this).find('input, textarea');
+            inputs.each(function() {
+                if ($(this).attr('type') === 'checkbox' || $(this).attr('type') === 'radio') {
+                    if ($(this).is(':checked')) hasAnswer = true;
+                } else {
+                    if ($(this).val().trim() !== '') hasAnswer = true;
+                }
+            });
+            
+            if (isRequired && !hasAnswer) {
+                $(this).addClass('border border-danger rounded p-2');
+                isValid = false;
+            } else {
+                $(this).removeClass('border border-danger rounded p-2');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            showAlert('Please answer all required questions before saving.', 'danger');
+            return false;
+        }
+        
+        // Show saving indicator
+        $(this).find('button[type="submit"]').prop('disabled', true).html('<i class="bi bi-hourglass-split me-2"></i>Saving...');
+    });
+});
+
+function updateProgress() {
+    const totalQuestions = $('.question-container').length;
+    let answeredQuestions = 0;
+    
+    $('.question-container').each(function() {
+        let hasAnswer = false;
+        const inputs = $(this).find('input, textarea');
+        
+        inputs.each(function() {
+            if ($(this).attr('type') === 'checkbox' || $(this).attr('type') === 'radio') {
+                if ($(this).is(':checked')) hasAnswer = true;
+            } else {
+                if ($(this).val().trim() !== '') hasAnswer = true;
+            }
+        });
+        
+        if (hasAnswer) answeredQuestions++;
+    });
+    
+    const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
+    $('#progress-bar').css('width', progress + '%').attr('aria-valuenow', progress);
+    $('#progress-text').text(`${answeredQuestions} of ${totalQuestions} questions answered`);
+}
+
+function showAlert(message, type) {
+    const alert = $(`
+        <div class="alert alert-${type} alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999;" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    $('body').append(alert);
+    
+    setTimeout(function() {
+        alert.fadeOut('slow', function() {
+            $(this).remove();
+        });
+    }, 5000);
+}
+</script>
+{% endblock %}
