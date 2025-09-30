@@ -1,0 +1,258 @@
+from flask import request, jsonify, session
+from flask_login import login_required, current_user
+from app import db
+from app.api import bp
+from app.models import Questionnaire, Question, Response, Answer
+import json
+import uuid
+
+@bp.route('/questions', methods=['POST'])
+@login_required
+def create_question():
+    """Create a new question via API"""
+    data = request.get_json()
+    
+    questionnaire = Questionnaire.query.get_or_404(data.get('questionnaire_id'))
+    
+    # Check permissions
+    if questionnaire.creator != current_user and not current_user.is_admin():
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    # Validate question data
+    if not data.get('question_text') or not data.get('question_type'):
+        return jsonify({'error': 'Question text and type are required'}), 400
+    
+    question = Question(
+        questionnaire_id=questionnaire.id,
+        question_text=data.get('question_text'),
+        question_type=data.get('question_type'),
+        is_required=data.get('is_required', True),
+        order=data.get('order', 0)
+    )
+    
+    # Handle options for choice questions
+    if data.get('question_type') in ['single_choice', 'multiple_choice']:
+        options = data.get('options', [])
+        if options:
+            question.set_options_list([opt for opt in options if opt.strip()])
+    
+    db.session.add(question)
+    db.session.commit()
+    
+    return jsonify({
+        'id': question.id,
+        'question_text': question.question_text,
+        'question_type': question.question_type,
+        'options': question.get_options_list(),
+        'is_required': question.is_required,
+        'order': question.order
+    }), 201
+
+@bp.route('/questions/<int:id>', methods=['PUT'])
+@login_required
+def update_question(id):
+    """Update a question via API"""
+    question = Question.query.get_or_404(id)
+    
+    # Check permissions
+    if question.questionnaire.creator != current_user and not current_user.is_admin():
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    data = request.get_json()
+    
+    # Update question fields
+    if 'question_text' in data:
+        question.question_text = data['question_text']
+    if 'question_type' in data:
+        question.question_type = data['question_type']
+    if 'is_required' in data:
+        question.is_required = data['is_required']
+    if 'order' in data:
+        question.order = data['order']
+    
+    # Handle options for choice questions
+    if question.question_type in ['single_choice', 'multiple_choice'] and 'options' in data:
+        options = data.get('options', [])
+        question.set_options_list([opt for opt in options if opt.strip()])
+    
+    db.session.commit()
+    
+    return jsonify({
+        'id': question.id,
+        'question_text': question.question_text,
+        'question_type': question.question_type,
+        'options': question.get_options_list(),
+        'is_required': question.is_required,
+        'order': question.order
+    })
+
+@bp.route('/questions/<int:id>', methods=['DELETE'])
+@login_required
+def delete_question(id):
+    """Delete a question via API"""
+    question = Question.query.get_or_404(id)
+    
+    # Check permissions
+    if question.questionnaire.creator != current_user and not current_user.is_admin():
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    db.session.delete(question)
+    db.session.commit()
+    
+    return jsonify({'message': 'Question deleted successfully'})
+
+@bp.route('/questionnaire/<int:id>/respond', methods=['POST'])
+def submit_response(id):
+    """Submit response to questionnaire"""
+    questionnaire = Questionnaire.query.get_or_404(id)
+    data = request.get_json()
+    
+    # Check if questionnaire is active
+    if not questionnaire.is_active:
+        return jsonify({'error': 'Questionnaire is not active'}), 400
+    
+    # Determine user or session
+    user_id = current_user.id if current_user.is_authenticated else None
+    session_id = session.get('session_id')
+    
+    if not user_id and not questionnaire.allow_anonymous:
+        return jsonify({'error': 'Authentication required'}), 401
+    
+    if not user_id and not session_id:
+        # Generate session ID for anonymous users
+        session_id = str(uuid.uuid4())
+        session['session_id'] = session_id
+    
+    # Check for existing response if multiple submissions not allowed
+    if not questionnaire.multiple_submissions:
+        existing_response = Response.query.filter_by(
+            questionnaire_id=id,
+            user_id=user_id,
+            is_complete=True
+        ).first()
+        
+        if user_id and existing_response:
+            return jsonify({'error': 'You have already completed this questionnaire'}), 400
+        
+        if not user_id and session_id:
+            existing_response = Response.query.filter_by(
+                questionnaire_id=id,
+                session_id=session_id,
+                is_complete=True
+            ).first()
+            
+            if existing_response:
+                return jsonify({'error': 'You have already completed this questionnaire'}), 400
+    
+    # Create response
+    response = Response(
+        questionnaire_id=id,
+        user_id=user_id,
+        session_id=session_id if not user_id else None,
+        is_complete=True
+    )
+    db.session.add(response)
+    db.session.flush()  # Get response ID
+    
+    # Process answers
+    answers = data.get('answers', {})
+    saved_answers = 0
+    
+    for question_id, answer_data in answers.items():
+        question = Question.query.get(int(question_id))
+        if not question or question.questionnaire_id != id:
+            continue
+        
+        # Validate required questions
+        if question.is_required and not answer_data:
+            return jsonify({
+                'error': f'Question "{question.question_text}" is required'
+            }), 400
+        
+        if answer_data:  # Only save non-empty answers
+            answer = Answer(
+                response_id=response.id,
+                question_id=question.id
+            )
+            
+            # Handle different question types
+            if question.question_type == 'open_ended':
+                answer.answer_text = answer_data
+            elif question.question_type in ['single_choice', 'scale']:
+                answer.answer_value = str(answer_data)
+            elif question.question_type == 'multiple_choice':
+                if isinstance(answer_data, list):
+                    answer.set_value_list(answer_data)
+                else:
+                    answer.answer_value = str(answer_data)
+            
+            db.session.add(answer)
+            saved_answers += 1
+    
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Response submitted successfully',
+        'response_id': response.id,
+        'answers_saved': saved_answers
+    }), 201
+
+@bp.route('/response/<int:id>/answers', methods=['GET'])
+@login_required
+def get_response_answers(id):
+    """Get answers for a specific response"""
+    response = Response.query.get_or_404(id)
+    
+    # Check permissions
+    if (response.user != current_user and 
+        response.questionnaire.creator != current_user and 
+        not current_user.is_admin()):
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    answers = {}
+    for answer in response.answers:
+        if answer.question.question_type == 'open_ended':
+            answers[answer.question_id] = answer.answer_text
+        elif answer.question.question_type == 'multiple_choice':
+            answers[answer.question_id] = answer.get_value_list()
+        else:
+            answers[answer.question_id] = answer.answer_value
+    
+    return jsonify({
+        'response_id': response.id,
+        'questionnaire_id': response.questionnaire_id,
+        'answers': answers,
+        'submitted_at': response.submitted_at.isoformat(),
+        'is_complete': response.is_complete
+    })
+
+@bp.route('/questionnaire/<int:id>/statistics', methods=['GET'])
+@login_required
+def get_questionnaire_statistics(id):
+    """Get statistics for a questionnaire"""
+    questionnaire = Questionnaire.query.get_or_404(id)
+    
+    # Check permissions
+    if (questionnaire.creator != current_user and not current_user.is_admin()):
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    # Get basic statistics
+    total_responses = questionnaire.responses.filter_by(is_complete=True).count()
+    
+    # Get question statistics
+    questions_stats = {}
+    for question in questionnaire.questions:
+        stats = question.get_answer_statistics()
+        questions_stats[question.id] = {
+            'question_text': question.question_text,
+            'question_type': question.question_type,
+            'statistics': stats,
+            'total_answers': sum(stats.values()) if stats else 0
+        }
+    
+    return jsonify({
+        'questionnaire_id': questionnaire.id,
+        'title': questionnaire.title,
+        'total_responses': total_responses,
+        'questions_statistics': questions_stats
+    })

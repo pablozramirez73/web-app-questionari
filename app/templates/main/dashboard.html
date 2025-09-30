@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Dashboard</h1>
+        <p class="text-muted mb-0">Welcome back, {{ current_user.get_full_name() }}!</p>
+    </div>
+    <div>
+        <a href="{{ url_for('main.create_questionnaire') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create Questionnaire
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-clipboard-check fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ stats.total_questionnaires }}</h3>
+                <p class="stat-label">My Questionnaires</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card stat-card success h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ stats.active_questionnaires }}</h3>
+                <p class="stat-label">Active</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card stat-card info h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-graph-up fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ stats.total_responses_received }}</h3>
+                <p class="stat-label">Responses Received</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card stat-card warning h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-person-check fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ stats.my_responses }}</h3>
+                <p class="stat-label">My Responses</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Questionnaires -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clipboard-data me-2"></i>Recent Questionnaires
+                </h5>
+                <a href="{{ url_for('main.my_questionnaires') }}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if user_questionnaires %}
+                    <div class="list-group list-group-flush">
+                        {% for questionnaire in user_questionnaires %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <a href="{{ url_for('main.view_questionnaire', id=questionnaire.id) }}" 
+                                           class="text-decoration-none">
+                                            {{ questionnaire.title }}
+                                        </a>
+                                        {% if questionnaire.is_active %}
+                                            <span class="badge bg-success ms-2">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary ms-2">Inactive</span>
+                                        {% endif %}
+                                    </h6>
+                                    <p class="mb-1 text-muted small">
+                                        {{ questionnaire.get_total_responses() }} responses • 
+                                        Created {{ questionnaire.created_at.strftime('%b %d, %Y') }}
+                                    </p>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            data-bs-toggle="dropdown">
+                                        Actions
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" 
+                                               href="{{ url_for('main.view_questionnaire', id=questionnaire.id) }}">
+                                                <i class="bi bi-eye me-2"></i>View
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" 
+                                               href="{{ url_for('main.edit_questionnaire', id=questionnaire.id) }}">
+                                                <i class="bi bi-pencil me-2"></i>Edit
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#" 
+                                               onclick="confirmDelete({{ questionnaire.id }}, '{{ questionnaire.title }}')">
+                                                <i class="bi bi-trash me-2"></i>Delete
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-clipboard-x text-muted" style="font-size: 3rem;"></i>
+                        <h6 class="text-muted mt-3">No questionnaires yet</h6>
+                        <p class="text-muted">Create your first questionnaire to get started.</p>
+                        <a href="{{ url_for('main.create_questionnaire') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Create Questionnaire
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-activity me-2"></i>Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if user_responses %}
+                    <div class="timeline">
+                        {% for response in user_responses %}
+                            <div class="timeline-item mb-3">
+                                <div class="timeline-marker bg-primary"></div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-1 small">Completed Questionnaire</h6>
+                                    <p class="mb-1">
+                                        <a href="{{ url_for('main.view_questionnaire', id=response.questionnaire.id) }}" 
+                                           class="text-decoration-none">
+                                            {{ response.questionnaire.title }}
+                                        </a>
+                                    </p>
+                                    <small class="text-muted">
+                                        {{ response.submitted_at.strftime('%b %d, %Y at %I:%M %p') }}
+                                    </small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-clock-history text-muted" style="font-size: 2rem;"></i>
+                        <p class="text-muted mt-2 mb-0">No recent activity</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning-charge me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('main.create_questionnaire') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Create Questionnaire
+                    </a>
+                    <a href="{{ url_for('main.questionnaires') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-search me-2"></i>Browse Questionnaires
+                    </a>
+                    <a href="{{ url_for('auth.profile') }}" class="btn btn-outline-info">
+                        <i class="bi bi-person me-2"></i>View Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the questionnaire "<span id="deleteQuestionnaireTitle"></span>"?</p>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDelete(questionnaireId, title) {
+    document.getElementById('deleteQuestionnaireTitle').textContent = title;
+    document.getElementById('deleteForm').action = '/questionnaire/' + questionnaireId + '/delete';
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+
+<style>
+.timeline {
+    position: relative;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 5px;
+    position: relative;
+}
+
+.timeline-content::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 15px;
+    border: 4px solid transparent;
+    border-right-color: #f8f9fa;
+}
+</style>
+{% endblock %}

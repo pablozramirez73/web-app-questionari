@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="jumbotron bg-primary text-white rounded mb-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="container py-5">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="display-4 fw-bold mb-3">
+                    Questionnaire Management System
+                </h1>
+                <p class="lead mb-4">
+                    Create, manage, and analyze questionnaires with ease. Collect valuable insights from your audience with our comprehensive survey platform.
+                </p>
+                <div class="d-flex gap-3 flex-wrap">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-light btn-lg">
+                            <i class="bi bi-speedometer2"></i> Go to Dashboard
+                        </a>
+                        <a href="{{ url_for('main.create_questionnaire') }}" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-plus-circle"></i> Create Questionnaire
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg">
+                            <i class="bi bi-person-plus"></i> Get Started
+                        </a>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-box-arrow-in-right"></i> Sign In
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-4 text-center">
+                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/dce1fe75-361a-4557-9408-25767c9d36ab.png" 
+                     alt="Professional questionnaire management dashboard interface" 
+                     class="img-fluid rounded shadow"
+                     style="max-height: 250px;" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Section -->
+<div class="row text-center mb-5">
+    <div class="col-md-6">
+        <div class="card stat-card success h-100">
+            <div class="card-body">
+                <i class="bi bi-clipboard-check fs-1 mb-3"></i>
+                <h2 class="stat-number">{{ total_questionnaires }}</h2>
+                <p class="stat-label">Active Questionnaires</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card stat-card info h-100">
+            <div class="card-body">
+                <i class="bi bi-graph-up fs-1 mb-3"></i>
+                <h2 class="stat-number">{{ total_responses }}</h2>
+                <p class="stat-label">Total Responses</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h2 class="text-center mb-5">Powerful Features</h2>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="feature-icon bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 60px; height: 60px;">
+                    <i class="bi bi-question-circle-fill fs-4"></i>
+                </div>
+                <h5 class="card-title">Multiple Question Types</h5>
+                <p class="card-text text-muted">
+                    Support for single choice, multiple choice, open-ended text, and 1-5 scale questions to capture diverse responses.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="feature-icon bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 60px; height: 60px;">
+                    <i class="bi bi-people-fill fs-4"></i>
+                </div>
+                <h5 class="card-title">User Management</h5>
+                <p class="card-text text-muted">
+                    Complete user authentication system with role-based access control and comprehensive user profiles.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="feature-icon bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 60px; height: 60px;">
+                    <i class="bi bi-bar-chart-fill fs-4"></i>
+                </div>
+                <h5 class="card-title">Advanced Analytics</h5>
+                <p class="card-text text-muted">
+                    Comprehensive data visualization with charts and graphs to analyze questionnaire responses and trends.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="feature-icon bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 60px; height: 60px;">
+                    <i class="bi bi-eye-fill fs-4"></i>
+                </div>
+                <h5 class="card-title">Response Tracking</h5>
+                <p class="card-text text-muted">
+                    Track who completed questionnaires, when they submitted responses, and allow editing of answers.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="feature-icon bg-danger text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 60px; height: 60px;">
+                    <i class="bi bi-shield-check fs-4"></i>
+                </div>
+                <h5 class="card-title">Secure & Reliable</h5>
+                <p class="card-text text-muted">
+                    Built with Flask and SQLite with comprehensive error handling, logging, and security best practices.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="feature-icon bg-secondary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 60px; height: 60px;">
+                    <i class="bi bi-device-tablet fs-4"></i>
+                </div>
+                <h5 class="card-title">Responsive Design</h5>
+                <p class="card-text text-muted">
+                    Beautiful, mobile-first design using Bootstrap 5 that works perfectly on all devices and screen sizes.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call to Action -->
+{% if not current_user.is_authenticated %}
+<div class="row">
+    <div class="col-12">
+        <div class="card bg-light border-0">
+            <div class="card-body text-center py-5">
+                <h3 class="mb-3">Ready to Get Started?</h3>
+                <p class="text-muted mb-4">
+                    Join thousands of users who trust our platform for their questionnaire needs.
+                </p>
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-person-plus"></i> Create Free Account
+                    </a>
+                    <a href="{{ url_for('main.questionnaires') }}" class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-search"></i> Browse Questionnaires
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
