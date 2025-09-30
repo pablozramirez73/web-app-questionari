@@ -214,3 +214,136 @@ def my_questionnaires():
     return render_template('main/my_questionnaires.html',
                          title='My Questionnaires',
                          questionnaires=questionnaires)
+
+@bp.route('/questionnaire/<int:id>/analytics')
+@login_required
+def questionnaire_analytics(id):
+    """View questionnaire analytics and charts"""
+    questionnaire = Questionnaire.query.get_or_404(id)
+    
+    # Check permissions
+    if questionnaire.creator != current_user and not current_user.is_admin():
+        flash('You do not have permission to view analytics for this questionnaire.', 'danger')
+        return redirect(url_for('main.questionnaires'))
+    
+    # Get basic statistics
+    total_responses = questionnaire.responses.filter_by(is_complete=True).count()
+    total_started = questionnaire.responses.count()
+    completion_rate = (total_responses / total_started * 100) if total_started > 0 else 0
+    
+    # Get response timeline data (last 30 days)
+    from datetime import datetime, timedelta
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    
+    timeline_data = db.session.query(
+        func.date(Response.submitted_at).label('date'),
+        func.count(Response.id).label('count')
+    ).filter(
+        Response.questionnaire_id == id,
+        Response.is_complete == True,
+        Response.submitted_at >= thirty_days_ago
+    ).group_by(func.date(Response.submitted_at)).all()
+    
+    # Get question analytics
+    questions_data = []
+    for question in questionnaire.questions.order_by(Question.order):
+        stats = question.get_answer_statistics()
+        questions_data.append({
+            'id': question.id,
+            'text': question.question_text,
+            'type': question.question_type,
+            'stats': stats,
+            'total_answers': sum(stats.values()) if stats else 0,
+            'response_rate': (sum(stats.values()) / total_responses * 100) if total_responses > 0 else 0
+        })
+    
+    # Get respondent demographics (if available)
+    user_responses = questionnaire.responses.filter_by(is_complete=True).filter(Response.user_id.isnot(None)).count()
+    anonymous_responses = questionnaire.responses.filter_by(is_complete=True).filter(Response.user_id.is_(None)).count()
+    
+    return render_template('main/questionnaire_analytics.html',
+                         title=f'Analytics - {questionnaire.title}',
+                         questionnaire=questionnaire,
+                         total_responses=total_responses,
+                         total_started=total_started,
+                         completion_rate=completion_rate,
+                         timeline_data=timeline_data,
+                         questions_data=questions_data,
+                         user_responses=user_responses,
+                         anonymous_responses=anonymous_responses)
+
+@bp.route('/questionnaire/<int:id>/responses')
+@login_required
+def questionnaire_responses(id):
+    """View individual responses for a questionnaire"""
+    questionnaire = Questionnaire.query.get_or_404(id)
+    
+    # Check permissions
+    if questionnaire.creator != current_user and not current_user.is_admin():
+        flash('You do not have permission to view responses for this questionnaire.', 'danger')
+        return redirect(url_for('main.questionnaires'))
+    
+    page = request.args.get('page', 1, type=int)
+    responses = questionnaire.responses.filter_by(is_complete=True).order_by(
+        desc(Response.submitted_at)
+    ).paginate(
+        page=page,
+        per_page=current_app.config['RESPONSES_PER_PAGE'],
+        error_out=False
+    )
+    
+    return render_template('main/questionnaire_responses.html',
+                         title=f'Responses - {questionnaire.title}',
+                         questionnaire=questionnaire,
+                         responses=responses)
+
+@bp.route('/questionnaire/<int:id>/export')
+@login_required
+def export_questionnaire_data(id):
+    """Export questionnaire data to CSV"""
+    questionnaire = Questionnaire.query.get_or_404(id)
+    
+    # Check permissions
+    if questionnaire.creator != current_user and not current_user.is_admin():
+        flash('You do not have permission to export data for this questionnaire.', 'danger')
+        return redirect(url_for('main.questionnaires'))
+    
+    import csv
+    import io
+    from flask import make_response
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    header = ['Response ID', 'Respondent', 'Submitted At', 'Complete']
+    for question in questionnaire.questions.order_by(Question.order):
+        header.append(f'Q{question.order + 1}: {question.question_text}')
+    writer.writerow(header)
+    
+    # Write data
+    for response in questionnaire.responses.filter_by(is_complete=True):
+        row = [
+            response.id,
+            response.get_respondent_name(),
+            response.submitted_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'Yes' if response.is_complete else 'No'
+        ]
+        
+        for question in questionnaire.questions.order_by(Question.order):
+            answer = response.answers.filter_by(question_id=question.id).first()
+            if answer:
+                row.append(answer.get_display_value())
+            else:
+                row.append('')
+        
+        writer.writerow(row)
+    
+    output.seek(0)
+    
+    # Create response
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=questionnaire_{id}_responses.csv'
+    
+    return response

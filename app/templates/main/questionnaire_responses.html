@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Responses</h2>
+        <p class="text-muted mb-0">{{ questionnaire.title }}</p>
+    </div>
+    <div>
+        <a href="{{ url_for('main.questionnaire_analytics', id=questionnaire.id) }}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-bar-chart"></i> Analytics
+        </a>
+        <a href="{{ url_for('main.export_questionnaire_data', id=questionnaire.id) }}" class="btn btn-outline-success me-2">
+            <i class="bi bi-download"></i> Export CSV
+        </a>
+        <a href="{{ url_for('main.edit_questionnaire', id=questionnaire.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Editor
+        </a>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-primary">{{ responses.total }}</h4>
+                <p class="card-text text-muted">Total Responses</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-success">{{ questionnaire.get_question_count() }}</h4>
+                <p class="card-text text-muted">Questions</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-info">{{ "%.1f"|format(questionnaire.get_completion_rate()) }}%</h4>
+                <p class="card-text text-muted">Completion Rate</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-warning">
+                    {% if responses.total > 0 %}
+                        85%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </h4>
+                <p class="card-text text-muted">Avg. Response Rate</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Responses Table -->
+<div class="card">
+    <div class="card-body">
+        {% if responses.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Respondent</th>
+                            <th>Submitted</th>
+                            <th>Progress</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for response in responses.items %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-primary">#{{ response.id }}</span>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{ response.get_respondent_name() }}</strong>
+                                        {% if response.user %}
+                                            <br><small class="text-muted">{{ response.user.email }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        {{ response.submitted_at.strftime('%b %d, %Y') }}
+                                        <br><small class="text-muted">{{ response.submitted_at.strftime('%I:%M %p') }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% set progress = response.get_progress_percentage() %}
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-success" 
+                                             style="width: {{ progress }}%">
+                                            {{ "%.0f"|format(progress) }}%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">
+                                        {{ response.answers.count() }} of {{ questionnaire.get_question_count() }} answered
+                                    </small>
+                                </td>
+                                <td>
+                                    <button class="btn btn-outline-primary btn-sm" 
+                                            onclick="viewResponse({{ response.id }})">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                <h5 class="text-muted mt-3">No responses yet</h5>
+                <p class="text-muted">Share your questionnaire to start collecting responses!</p>
+                <a href="{{ url_for('main.view_questionnaire', id=questionnaire.id) }}" class="btn btn-primary">
+                    <i class="bi bi-eye"></i> Preview Questionnaire
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if responses.pages > 1 %}
+    <nav aria-label="Responses pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if responses.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.questionnaire_responses', id=questionnaire.id, page=responses.prev_num) }}">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="bi bi-chevron-left"></i> Previous</span>
+                </li>
+            {% endif %}
+            
+            {% for page_num in responses.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != responses.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.questionnaire_responses', id=questionnaire.id, page=page_num) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">…</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if responses.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.questionnaire_responses', id=questionnaire.id, page=responses.next_num) }}">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next <i class="bi bi-chevron-right"></i></span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+
+<!-- Response Detail Modal -->
+<div class="modal fade" id="responseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Response Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="responseModalBody">
+                <div class="text-center">
+                    <div class="spinner-border" role="status"></div>
+                    <p class="mt-2">Loading response details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function viewResponse(responseId) {
+    $('#responseModalBody').html(`
+        <div class="text-center">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2">Loading response details...</p>
+        </div>
+    `);
+    
+    const modal = new bootstrap.Modal(document.getElementById('responseModal'));
+    modal.show();
+    
+    // Load response details via AJAX
+    $.get(`/api/response/${responseId}/answers`)
+        .done(function(data) {
+            let html = `
+                <div class="mb-3">
+                    <h6>Response #${data.response_id}</h6>
+                    <small class="text-muted">Submitted: ${new Date(data.submitted_at).toLocaleString()}</small>
+                </div>
+            `;
+            
+            // Get questionnaire questions to display in order
+            {% for question in questionnaire.questions.order_by('order') %}
+                const answer = data.answers['{{ question.id }}'];
+                html += `
+                    <div class="mb-4">
+                        <div class="fw-bold mb-2">Q{{ loop.index }}: {{ question.question_text }}</div>
+                        <div class="ps-3">
+                `;
+                
+                if (answer !== undefined && answer !== null && answer !== '') {
+                    {% if question.question_type == 'open_ended' %}
+                        html += `<div class="alert alert-light">${answer}</div>`;
+                    {% elif question.question_type == 'scale' %}
+                        html += `<div class="badge bg-primary fs-6">${answer}/5 ⭐</div>`;
+                    {% else %}
+                        if (Array.isArray(answer)) {
+                            html += `<div>`;
+                            answer.forEach(function(value) {
+                                html += `<span class="badge bg-success me-1">${value}</span>`;
+                            });
+                            html += `</div>`;
+                        } else {
+                            html += `<span class="badge bg-success">${answer}</span>`;
+                        }
+                    {% endif %}
+                } else {
+                    html += `<small class="text-muted">No answer provided</small>`;
+                }
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            {% endfor %}
+            
+            $('#responseModalBody').html(html);
+        })
+        .fail(function() {
+            $('#responseModalBody').html(`
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Failed to load response details. Please try again.
+                </div>
+            `);
+        });
+}
+</script>
+{% endblock %}

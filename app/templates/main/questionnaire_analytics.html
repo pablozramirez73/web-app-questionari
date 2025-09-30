@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Analytics Dashboard</h2>
+        <p class="text-muted mb-0">{{ questionnaire.title }}</p>
+    </div>
+    <div>
+        <a href="{{ url_for('main.questionnaire_responses', id=questionnaire.id) }}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-list-ul"></i> View Responses
+        </a>
+        <a href="{{ url_for('main.export_questionnaire_data', id=questionnaire.id) }}" class="btn btn-outline-success me-2">
+            <i class="bi bi-download"></i> Export CSV
+        </a>
+        <a href="{{ url_for('main.edit_questionnaire', id=questionnaire.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Editor
+        </a>
+    </div>
+</div>
+
+<!-- Overview Statistics -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-people-fill fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ total_responses }}</h3>
+                <p class="stat-label">Total Responses</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stat-card success h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ "%.1f"|format(completion_rate) }}%</h3>
+                <p class="stat-label">Completion Rate</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stat-card info h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-play-circle fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ total_started }}</h3>
+                <p class="stat-label">Started</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stat-card warning h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-question-circle fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ questionnaire.get_question_count() }}</h3>
+                <p class="stat-label">Questions</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Response Timeline Chart -->
+{% if timeline_data %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Response Timeline (Last 30 Days)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Respondent Demographics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>Respondent Type
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="respondentChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Quick Stats
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="fw-bold text-primary fs-4">{{ user_responses }}</div>
+                        <small class="text-muted">Registered Users</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="fw-bold text-secondary fs-4">{{ anonymous_responses }}</div>
+                        <small class="text-muted">Anonymous</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold text-success fs-4">
+                            {{ "%.1f"|format(completion_rate) }}%
+                        </div>
+                        <small class="text-muted">Avg. Completion</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold text-info fs-4">
+                            {{ questionnaire.questions.count() }}
+                        </div>
+                        <small class="text-muted">Total Questions</small>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('main.view_questionnaire', id=questionnaire.id) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-eye"></i> Preview Questionnaire
+                    </a>
+                    <button class="btn btn-outline-info btn-sm" onclick="refreshAnalytics()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Question Analytics -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>Question Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if questions_data %}
+                    {% for question in questions_data %}
+                        <div class="question-analytics mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h6 class="mb-1">Question {{ loop.index }}: {{ question.text }}</h6>
+                                    <small class="text-muted">
+                                        Type: {{ question.type.replace('_', ' ').title() }} • 
+                                        {{ question.total_answers }} answers • 
+                                        {{ "%.1f"|format(question.response_rate) }}% response rate
+                                    </small>
+                                </div>
+                                <span class="badge bg-primary">{{ question.type.replace('_', ' ').title() }}</span>
+                            </div>
+                            
+                            {% if question.type in ['single_choice', 'multiple_choice'] and question.stats %}
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="chart-container" style="height: 250px;">
+                                            <canvas id="questionChart{{ question.id }}"></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="list-group list-group-flush">
+                                            {% for option, count in question.stats.items() %}
+                                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                                    <span class="fw-medium">{{ option }}</span>
+                                                    <div>
+                                                        <span class="badge bg-primary rounded-pill me-2">{{ count }}</span>
+                                                        <small class="text-muted">
+                                                            {% set percentage = (count / question.total_answers * 100) if question.total_answers > 0 else 0 %}
+                                                            ({{ "%.1f"|format(percentage) }}%)
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% elif question.type == 'scale' and question.stats %}
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="chart-container" style="height: 250px;">
+                                            <canvas id="questionChart{{ question.id }}"></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center">
+                                            {% set total_score = namespace(value=0) %}
+                                            {% set total_resp = namespace(value=0) %}
+                                            {% for rating, count in question.stats.items() %}
+                                                {% set total_score.value = total_score.value + (rating|int * count) %}
+                                                {% set total_resp.value = total_resp.value + count %}
+                                            {% endfor %}
+                                            
+                                            <div class="fw-bold text-primary" style="font-size: 2rem;">
+                                                {% set avg_rating = (total_score.value / total_resp.value) if total_resp.value > 0 else 0 %}
+                                                {{ "%.2f"|format(avg_rating) }}/5
+                                            </div>
+                                            <p class="text-muted">Average Rating</p>
+                                            
+                                            <div class="mt-3">
+                                                {% for i in range(1, 6) %}
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <span>{{ i }} ⭐</span>
+                                                        <span class="badge bg-secondary">{{ question.stats.get(i|string, 0) }}</span>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% elif question.type == 'open_ended' %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>{{ question.total_answers }}</strong> text responses received. 
+                                    <a href="{{ url_for('main.questionnaire_responses', id=questionnaire.id) }}" class="alert-link">
+                                        View individual responses
+                                    </a> to see detailed answers.
+                                </div>
+                            {% else %}
+                                <div class="alert alert-secondary">
+                                    <i class="bi bi-inbox me-2"></i>
+                                    No responses yet for this question.
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if not loop.last %}
+                            <hr class="my-4">
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-question-circle text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted mt-3">No questions yet</h5>
+                        <p class="text-muted">Add questions to your questionnaire to see analytics here.</p>
+                        <a href="{{ url_for('main.edit_questionnaire', id=questionnaire.id) }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Add Questions
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Chart.js Configuration and Data
+const chartColors = [
+    'rgba(13, 110, 253, 0.8)',   // Primary blue
+    'rgba(25, 135, 84, 0.8)',    // Success green
+    'rgba(255, 193, 7, 0.8)',    // Warning yellow  
+    'rgba(220, 53, 69, 0.8)',    // Danger red
+    'rgba(13, 202, 240, 0.8)',   // Info cyan
+    'rgba(108, 117, 125, 0.8)',  // Secondary gray
+    'rgba(102, 16, 242, 0.8)',   // Purple
+    'rgba(255, 99, 132, 0.8)',   // Pink
+    'rgba(54, 162, 235, 0.8)',   // Light blue
+    'rgba(255, 159, 64, 0.8)'    // Orange
+];
+
+// Response Timeline Chart
+{% if timeline_data %}
+const timelineLabels = [{% for data in timeline_data %}'{{ data.date.strftime("%m/%d") }}'{{ ',' if not loop.last }}{% endfor %}];
+const timelineData = [{% for data in timeline_data %}{{ data.count }}{{ ',' if not loop.last }}{% endfor %}];
+
+const timelineChart = new Chart(document.getElementById('timelineChart'), {
+    type: 'line',
+    data: {
+        labels: timelineLabels,
+        datasets: [{
+            label: 'Responses',
+            data: timelineData,
+            borderColor: chartColors[0],
+            backgroundColor: chartColors[0].replace('0.8', '0.2'),
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+{% endif %}
+
+// Respondent Type Chart
+const respondentChart = new Chart(document.getElementById('respondentChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Registered Users', 'Anonymous'],
+        datasets: [{
+            data: [{{ user_responses }}, {{ anonymous_responses }}],
+            backgroundColor: [chartColors[0], chartColors[5]],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Question Charts
+{% for question in questions_data %}
+    {% if question.type in ['single_choice', 'multiple_choice'] and question.stats %}
+        const questionChart{{ question.id }} = new Chart(document.getElementById('questionChart{{ question.id }}'), {
+            type: '{{ "bar" if question.type == "multiple_choice" else "doughnut" }}',
+            data: {
+                labels: [{% for option, count in question.stats.items() %}'{{ option }}'{{ ',' if not loop.last }}{% endfor %}],
+                datasets: [{
+                    label: 'Responses',
+                    data: [{% for option, count in question.stats.items() %}{{ count }}{{ ',' if not loop.last }}{% endfor %}],
+                    backgroundColor: chartColors.slice(0, {{ question.stats|length }}),
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        {% if question.type == 'multiple_choice' %}display: false{% else %}position: 'bottom'{% endif %}
+                    }
+                }
+                {% if question.type == 'multiple_choice' %},
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+                {% endif %}
+            }
+        });
+    {% elif question.type == 'scale' and question.stats %}
+        const questionChart{{ question.id }} = new Chart(document.getElementById('questionChart{{ question.id }}'), {
+            type: 'bar',
+            data: {
+                labels: ['1 ⭐', '2 ⭐', '3 ⭐', '4 ⭐', '5 ⭐'],
+                datasets: [{
+                    label: 'Responses',
+                    data: [{% for i in range(1, 6) %}{{ question.stats.get(i|string, 0) }}{{ ',' if not loop.last }}{% endfor %}],
+                    backgroundColor: [
+                        'rgba(220, 53, 69, 0.8)',   // 1 star - red
+                        'rgba(255, 193, 7, 0.8)',   // 2 stars - yellow
+                        'rgba(108, 117, 125, 0.8)', // 3 stars - gray
+                        'rgba(13, 202, 240, 0.8)',  // 4 stars - cyan
+                        'rgba(25, 135, 84, 0.8)'    // 5 stars - green
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    {% endif %}
+{% endfor %}
+
+// Refresh Analytics Function
+function refreshAnalytics() {
+    location.reload();
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}
