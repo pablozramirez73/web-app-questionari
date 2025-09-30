@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Admin Dashboard</h2>
+        <p class="text-muted mb-0">System overview and management</p>
+    </div>
+    <div>
+        <span class="badge bg-danger fs-6">Administrator</span>
+    </div>
+</div>
+
+<!-- System Statistics -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-people-fill fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ stats.users.total }}</h3>
+                <p class="stat-label">Total Users</p>
+                <small class="text-light">{{ stats.users.active }} active</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stat-card success h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-clipboard-data fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ stats.questionnaires.total }}</h3>
+                <p class="stat-label">Questionnaires</p>
+                <small class="text-light">{{ stats.questionnaires.active }} active</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stat-card info h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-graph-up fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ stats.responses.total }}</h3>
+                <p class="stat-label">Total Responses</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stat-card warning h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-shield-check fs-1 mb-3"></i>
+                <h3 class="stat-number">{{ stats.users.admins }}</h3>
+                <p class="stat-label">Administrators</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Users -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-plus me-2"></i>Recent Users
+                </h5>
+                <a href="{{ url_for('admin.manage_users') }}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_users %}
+                    <div class="list-group list-group-flush">
+                        {% for user in recent_users %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">{{ user.get_full_name() }}</h6>
+                                    <p class="mb-1 text-muted small">{{ user.email }}</p>
+                                    <small class="text-muted">Joined {{ user.created_at.strftime('%b %d, %Y') }}</small>
+                                </div>
+                                <div class="text-end">
+                                    {% if user.role == 'admin' %}
+                                        <span class="badge bg-danger mb-2">Admin</span>
+                                    {% else %}
+                                        <span class="badge bg-primary mb-2">User</span>
+                                    {% endif %}
+                                    <br>
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No recent users</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Questionnaires -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clipboard-plus me-2"></i>Recent Questionnaires
+                </h5>
+                <a href="{{ url_for('admin.manage_questionnaires') }}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_questionnaires %}
+                    <div class="list-group list-group-flush">
+                        {% for questionnaire in recent_questionnaires %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <a href="{{ url_for('main.view_questionnaire', id=questionnaire.id) }}" 
+                                           class="text-decoration-none">
+                                            {{ questionnaire.title }}
+                                        </a>
+                                    </h6>
+                                    <p class="mb-1 text-muted small">By {{ questionnaire.creator.get_full_name() }}</p>
+                                    <small class="text-muted">{{ questionnaire.created_at.strftime('%b %d, %Y') }}</small>
+                                </div>
+                                <div class="text-end">
+                                    {% if questionnaire.is_active %}
+                                        <span class="badge bg-success mb-2">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary mb-2">Inactive</span>
+                                    {% endif %}
+                                    <br>
+                                    <small class="text-muted">{{ questionnaire.get_total_responses() }} responses</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No recent questionnaires</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-activity me-2"></i>Recent Response Activity
+                </h5>
+                <a href="{{ url_for('admin.manage_responses') }}" class="btn btn-sm btn-outline-primary">
+                    View All Responses
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_responses %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Questionnaire</th>
+                                    <th>Respondent</th>
+                                    <th>Submitted</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for response in recent_responses %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('main.view_questionnaire', id=response.questionnaire.id) }}" 
+                                               class="text-decoration-none">
+                                                {{ response.questionnaire.title }}
+                                            </a>
+                                        </td>
+                                        <td>{{ response.get_respondent_name() }}</td>
+                                        <td>{{ response.submitted_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+                                        <td>
+                                            {% if response.is_complete %}
+                                                <span class="badge bg-success">Complete</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Partial</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('main.view_questionnaire', id=response.questionnaire.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No recent responses</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Responses Chart -->
+{% if monthly_responses %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-bar-chart me-2"></i>Monthly Response Trends
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyResponsesChart" width="400" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if monthly_responses %}
+<script>
+// Monthly Responses Chart
+const ctx = document.getElementById('monthlyResponsesChart').getContext('2d');
+const monthlyData = {
+    labels: [{% for month_data in monthly_responses %}'{{ month_data.month }}'{{ ',' if not loop.last }}{% endfor %}],
+    datasets: [{
+        label: 'Responses',
+        data: [{% for month_data in monthly_responses %}{{ month_data.count }}{{ ',' if not loop.last }}{% endfor %}],
+        backgroundColor: 'rgba(13, 110, 253, 0.2)',
+        borderColor: 'rgba(13, 110, 253, 1)',
+        borderWidth: 2,
+        fill: true
+    }]
+};
+
+new Chart(ctx, {
+    type: 'line',
+    data: monthlyData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

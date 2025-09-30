@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="mb-1">Edit Questionnaire</h2>
+                <p class="text-muted mb-0">{{ questionnaire.title }}</p>
+            </div>
+            <div>
+                <a href="{{ url_for('main.view_questionnaire', id=questionnaire.id) }}" 
+                   class="btn btn-outline-primary me-2">
+                    <i class="bi bi-eye"></i> Preview
+                </a>
+                <a href="{{ url_for('main.questionnaires') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Questionnaire Settings -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-gear me-2"></i>Questionnaire Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title() }}
+                        {% if form.title.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.title.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description() }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check mb-2">
+                            {{ form.is_active() }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                        </div>
+                        <div class="form-check mb-2">
+                            {{ form.allow_anonymous() }}
+                            {{ form.allow_anonymous.label(class="form-check-label") }}
+                        </div>
+                        <div class="form-check">
+                            {{ form.multiple_submissions() }}
+                            {{ form.multiple_submissions.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+                
+                <!-- Statistics -->
+                <hr class="my-4">
+                <div class="text-center">
+                    <h6 class="text-muted">Statistics</h6>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="fw-bold">{{ questionnaire.get_question_count() }}</div>
+                            <small class="text-muted">Questions</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="fw-bold">{{ questionnaire.get_total_responses() }}</div>
+                            <small class="text-muted">Responses</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Questions Management -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-question-circle me-2"></i>Questions
+                </h5>
+                <button type="button" class="btn btn-success" id="add-question-btn" 
+                        data-questionnaire-id="{{ questionnaire.id }}">
+                    <i class="bi bi-plus"></i> Add Question
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="questions-container">
+                    {% if questions %}
+                        {% for question in questions %}
+                            <div class="question-item card mb-3" data-question-id="{{ question.id }}" data-order="{{ question.order }}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="card-title mb-0">
+                                            <i class="bi bi-grip-vertical drag-handle me-2"></i>
+                                            Question {{ loop.index }}
+                                            {% if question.question_type == 'single_choice' %}
+                                                <span class="badge bg-primary question-type-badge">Single Choice</span>
+                                            {% elif question.question_type == 'multiple_choice' %}
+                                                <span class="badge bg-info question-type-badge">Multiple Choice</span>
+                                            {% elif question.question_type == 'open_ended' %}
+                                                <span class="badge bg-success question-type-badge">Open Ended</span>
+                                            {% elif question.question_type == 'scale' %}
+                                                <span class="badge bg-warning question-type-badge">Scale 1-5</span>
+                                            {% endif %}
+                                        </h6>
+                                        <div>
+                                            <button type="button" class="btn btn-success btn-sm save-question-btn">
+                                                <i class="bi bi-save"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm delete-question-btn">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Question Text</label>
+                                        <textarea class="form-control question-text" rows="3">{{ question.question_text }}</textarea>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Question Type</label>
+                                            <select class="form-select question-type-select">
+                                                <option value="single_choice"{% if question.question_type == 'single_choice' %} selected{% endif %}>Single Choice</option>
+                                                <option value="multiple_choice"{% if question.question_type == 'multiple_choice' %} selected{% endif %}>Multiple Choice</option>
+                                                <option value="open_ended"{% if question.question_type == 'open_ended' %} selected{% endif %}>Open-ended Text</option>
+                                                <option value="scale"{% if question.question_type == 'scale' %} selected{% endif %}>Scale (1-5)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check mt-4">
+                                                <input class="form-check-input question-required" type="checkbox" {% if question.is_required %}checked{% endif %}>
+                                                <label class="form-check-label">Required</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if question.question_type in ['single_choice', 'multiple_choice'] %}
+                                        <div class="choice-options">
+                                            <label class="form-label">Answer Options</label>
+                                            <div class="options-list">
+                                                {% for option in question.get_options_list() %}
+                                                    <div class="input-group mb-2 option-input">
+                                                        <span class="input-group-text">Option {{ loop.index }}</span>
+                                                        <input type="text" class="form-control option-text" value="{{ option }}">
+                                                        <button type="button" class="btn btn-outline-danger remove-option-btn">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                            <button type="button" class="btn btn-outline-primary btn-sm add-option-btn">
+                                                <i class="bi bi-plus-circle"></i> Add Option
+                                            </button>
+                                        </div>
+                                    {% else %}
+                                        <div class="choice-options" style="display: none;">
+                                            <label class="form-label">Answer Options</label>
+                                            <div class="options-list"></div>
+                                            <button type="button" class="btn btn-outline-primary btn-sm add-option-btn">
+                                                <i class="bi bi-plus-circle"></i> Add Option
+                                            </button>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-question-circle text-muted" style="font-size: 3rem;"></i>
+                            <h5 class="text-muted mt-3">No questions yet</h5>
+                            <p class="text-muted">Add your first question to get started.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="questionnaire-id" value="{{ questionnaire.id }}">
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize questionnaire builder
+$(document).ready(function() {
+    // Question type change handler
+    $(document).on('change', '.question-type-select', function() {
+        const questionType = $(this).val();
+        const questionContainer = $(this).closest('.question-item');
+        const optionsContainer = questionContainer.find('.choice-options');
+        
+        if (questionType === 'single_choice' || questionType === 'multiple_choice') {
+            optionsContainer.show();
+            if (optionsContainer.find('.option-input').length === 0) {
+                generateOptionInputs(optionsContainer, 2);
+            }
+        } else {
+            optionsContainer.hide();
+        }
+        
+        // Update badge
+        const badge = questionContainer.find('.question-type-badge');
+        badge.removeClass('bg-primary bg-info bg-success bg-warning');
+        switch(questionType) {
+            case 'single_choice':
+                badge.addClass('bg-primary').text('Single Choice');
+                break;
+            case 'multiple_choice':
+                badge.addClass('bg-info').text('Multiple Choice');
+                break;
+            case 'open_ended':
+                badge.addClass('bg-success').text('Open Ended');
+                break;
+            case 'scale':
+                badge.addClass('bg-warning').text('Scale 1-5');
+                break;
+        }
+    });
+});
+
+function generateOptionInputs(container, count = 2) {
+    const optionsList = container.find('.options-list');
+    optionsList.empty();
+    
+    for (let i = 1; i <= count; i++) {
+        const option = $(`
+            <div class="input-group mb-2 option-input">
+                <span class="input-group-text">Option ${i}</span>
+                <input type="text" class="form-control option-text" placeholder="Enter option text">
+                <button type="button" class="btn btn-outline-danger remove-option-btn">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `);
+        optionsList.append(option);
+    }
+}
+</script>
+{% endblock %}

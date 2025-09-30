@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Browse Questionnaires</h2>
+        <p class="text-muted mb-0">Discover and participate in surveys</p>
+    </div>
+    {% if current_user.is_authenticated %}
+        <a href="{{ url_for('main.create_questionnaire') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create Questionnaire
+        </a>
+    {% endif %}
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-6">
+                {{ search_form.search.label(class="form-label") }}
+                {{ search_form.search(value=request.args.get('search', '')) }}
+            </div>
+            <div class="col-md-4">
+                {{ search_form.filter_by.label(class="form-label") }}
+                {{ search_form.filter_by() }}
+            </div>
+            <div class="col-md-2">
+                <div class="d-grid">
+                    {{ search_form.submit() }}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Questionnaires List -->
+<div class="row">
+    {% if questionnaires.items %}
+        {% for questionnaire in questionnaires.items %}
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h5 class="card-title mb-0">
+                                <a href="{{ url_for('main.view_questionnaire', id=questionnaire.id) }}" 
+                                   class="text-decoration-none">
+                                    {{ questionnaire.title }}
+                                </a>
+                            </h5>
+                            {% if questionnaire.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if questionnaire.description %}
+                            <p class="card-text text-muted">
+                                {{ questionnaire.description[:150] }}
+                                {% if questionnaire.description|length > 150 %}...{% endif %}
+                            </p>
+                        {% endif %}
+                        
+                        <!-- Questionnaire Stats -->
+                        <div class="row text-center mb-3">
+                            <div class="col-4">
+                                <div class="fw-bold text-primary">{{ questionnaire.get_question_count() }}</div>
+                                <small class="text-muted">Questions</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold text-success">{{ questionnaire.get_total_responses() }}</div>
+                                <small class="text-muted">Responses</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold text-info">{{ "%.0f"|format(questionnaire.get_completion_rate()) }}%</div>
+                                <small class="text-muted">Complete</small>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                By {{ questionnaire.creator.get_full_name() }} • 
+                                {{ questionnaire.created_at.strftime('%b %d, %Y') }}
+                            </small>
+                            
+                            <div class="btn-group">
+                                <a href="{{ url_for('main.view_questionnaire', id=questionnaire.id) }}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                {% if current_user.is_authenticated and questionnaire.creator == current_user %}
+                                    <a href="{{ url_for('main.edit_questionnaire', id=questionnaire.id) }}" 
+                                       class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if questionnaire.is_active %}
+                        <div class="card-footer bg-transparent">
+                            {% set can_respond, message = questionnaire.can_user_respond(current_user if current_user.is_authenticated else None) %}
+                            {% if can_respond %}
+                                <a href="{{ url_for('main.view_questionnaire', id=questionnaire.id) }}" 
+                                   class="btn btn-success btn-sm w-100">
+                                    <i class="bi bi-play-circle"></i> Start Questionnaire
+                                </a>
+                            {% else %}
+                                <button class="btn btn-secondary btn-sm w-100" disabled>
+                                    <i class="bi bi-check-circle"></i> {{ message }}
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <!-- No Results -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    {% if request.args.get('search') or request.args.get('filter_by') != 'all' %}
+                        <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted mt-3">No questionnaires found</h5>
+                        <p class="text-muted">Try adjusting your search criteria or filters.</p>
+                        <a href="{{ url_for('main.questionnaires') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-clockwise"></i> Clear Filters
+                        </a>
+                    {% else %}
+                        <i class="bi bi-clipboard-x text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted mt-3">No questionnaires available</h5>
+                        <p class="text-muted">Be the first to create a questionnaire!</p>
+                        {% if current_user.is_authenticated %}
+                            <a href="{{ url_for('main.create_questionnaire') }}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> Create First Questionnaire
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-primary">
+                                <i class="bi bi-person-plus"></i> Sign Up to Create
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Pagination -->
+{% if questionnaires.pages > 1 %}
+    <nav aria-label="Questionnaires pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <!-- Previous Page -->
+            {% if questionnaires.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.questionnaires', page=questionnaires.prev_num, 
+                                                          search=request.args.get('search', ''), 
+                                                          filter_by=request.args.get('filter_by', 'all')) }}">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="bi bi-chevron-left"></i> Previous</span>
+                </li>
+            {% endif %}
+            
+            <!-- Page Numbers -->
+            {% for page_num in questionnaires.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != questionnaires.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.questionnaires', page=page_num,
+                                                                  search=request.args.get('search', ''), 
+                                                                  filter_by=request.args.get('filter_by', 'all')) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">…</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            <!-- Next Page -->
+            {% if questionnaires.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.questionnaires', page=questionnaires.next_num,
+                                                          search=request.args.get('search', ''), 
+                                                          filter_by=request.args.get('filter_by', 'all')) }}">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next <i class="bi bi-chevron-right"></i></span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+
+{% endblock %}

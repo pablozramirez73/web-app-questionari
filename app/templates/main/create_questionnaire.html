@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0">
+                    <i class="bi bi-plus-circle me-2"></i>Create New Questionnaire
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-4">
+                        {{ form.title.label(class="form-label fw-bold") }}
+                        {{ form.title() }}
+                        {% if form.title.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.title.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        {{ form.description.label(class="form-label fw-bold") }}
+                        {{ form.description() }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Optional: Provide a brief description of your questionnaire</div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                {{ form.is_active() }}
+                                {{ form.is_active.label(class="form-check-label") }}
+                            </div>
+                            <div class="form-text">Questionnaire will be visible to users</div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                {{ form.allow_anonymous() }}
+                                {{ form.allow_anonymous.label(class="form-check-label") }}
+                            </div>
+                            <div class="form-text">Allow responses without login</div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                {{ form.multiple_submissions() }}
+                                {{ form.multiple_submissions.label(class="form-check-label") }}
+                            </div>
+                            <div class="form-text">Allow multiple responses per user</div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.questionnaires') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Cancel
+                        </a>
+                        {{ form.submit() }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Information Card -->
+        <div class="card mt-4 bg-light">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-info-circle me-2"></i>Next Steps
+                </h6>
+                <p class="card-text small mb-0">
+                    After creating your questionnaire, you'll be able to add questions with different types:
+                    single choice, multiple choice, open-ended text, and rating scales (1-5).
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
