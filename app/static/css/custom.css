@@ -273,7 +273,7 @@ body {
     transition: width 0.3s ease;
 }
 
-/* Enhanced Multiple Choice Styling */
+/* Enhanced Multiple Choice Styling - Fixed for Multiple Selection */
 .form-check {
     margin-bottom: 1rem;
     padding: 0.75rem;
@@ -289,6 +289,8 @@ body {
     width: 1.25rem;
     height: 1.25rem;
     margin-top: 0.125rem;
+    /* Ensure checkboxes allow multiple selection */
+    cursor: pointer;
 }
 
 .form-check-input:checked {
@@ -296,10 +298,72 @@ body {
     border-color: var(--primary-color);
 }
 
+.form-check-input[type="checkbox"] {
+    /* Enhanced checkbox styling for multiple selection */
+    border-radius: 4px;
+    border: 2px solid var(--border-dark);
+    background-color: var(--bg-primary);
+    transition: all 0.2s ease;
+}
+
+.form-check-input[type="checkbox"]:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
+}
+
+.form-check-input[type="checkbox"]:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.form-check-input[type="radio"] {
+    /* Enhanced radio styling for single selection */
+    border-radius: 50%;
+    border: 2px solid var(--border-dark);
+    background-color: var(--bg-primary);
+    transition: all 0.2s ease;
+}
+
+.form-check-input[type="radio"]:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-check-input[type="radio"]:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* Multiple choice question specific styling */
+.question-container[data-question-type="multiple_choice"] {
+    border-left: 4px solid var(--info-color);
+    padding-left: 1rem;
+}
+
+.question-container[data-question-type="single_choice"] {
+    border-left: 4px solid var(--warning-color);
+    padding-left: 1rem;
+}
+
+/* Selection counter styling */
+.selection-counter {
+    animation: fadeIn 0.3s ease;
+}
+
+/* Enhanced visual feedback */
+.form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+    border-color: var(--primary-color);
+}
+
 .form-check-label {
     font-weight: 500;
     color: var(--text-primary);
     margin-left: 0.5rem;
+    cursor: pointer;
+    /* Ensure label clicks work properly */
+    user-select: none;
 }
 
 /* Enhanced Buttons */
