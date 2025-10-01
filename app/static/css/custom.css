@@ -335,15 +335,29 @@ body {
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
-/* Multiple choice question specific styling */
+/* Question type specific styling - All use single selection */
 .question-container[data-question-type="multiple_choice"] {
-    border-left: 4px solid var(--info-color);
+    border-left: 4px solid var(--success-color);
     padding-left: 1rem;
+    background-color: rgba(5, 150, 105, 0.02);
 }
 
 .question-container[data-question-type="single_choice"] {
+    border-left: 4px solid var(--primary-color);
+    padding-left: 1rem;
+    background-color: rgba(37, 99, 235, 0.02);
+}
+
+.question-container[data-question-type="scale"] {
     border-left: 4px solid var(--warning-color);
     padding-left: 1rem;
+    background-color: rgba(217, 119, 6, 0.02);
+}
+
+.question-container[data-question-type="open_ended"] {
+    border-left: 4px solid var(--info-color);
+    padding-left: 1rem;
+    background-color: rgba(14, 165, 233, 0.02);
 }
 
 /* Selection counter styling */

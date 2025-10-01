@@ -104,7 +104,7 @@
                                     <div class="mt-3">
                                         {% for option in question.get_options_list() %}
                                             <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" 
+                                                <input class="form-check-input" type="radio" 
                                                        name="question_{{ question.id }}" 
                                                        value="{{ option }}" 
                                                        id="q{{ question.id }}_{{ loop.index }}">
@@ -228,18 +228,16 @@ $(document).ready(function() {
             
             const questionType = $(this).find('input').first().attr('type');
             
-            if (questionType === 'checkbox') {
-                // Multiple choice
-                const values = [];
-                $(this).find('input:checked').each(function() {
-                    values.push($(this).val());
-                });
-                if (values.length > 0) {
-                    formData[questionId] = values;
-                }
-            } else if (questionType === 'radio') {
-                // Single choice or scale
+            if (questionType === 'radio') {
+                // All choice questions (single_choice, multiple_choice, scale) use radio buttons for single selection
                 const checkedValue = $(this).find('input:checked').val();
+                if (checkedValue) {
+                    formData[questionId] = checkedValue;
+                    console.log(`Choice question Q${questionId}: Selected:`, checkedValue);
+                }
+            } else if (questionType === 'checkbox') {
+                // Legacy checkbox handling (should not be used anymore)
+                const checkedValue = $(this).find('input:checked').first().val();
                 if (checkedValue) {
                     formData[questionId] = checkedValue;
                 }
@@ -248,6 +246,7 @@ $(document).ready(function() {
                 const textValue = $(this).find('textarea').val().trim();
                 if (textValue) {
                     formData[questionId] = textValue;
+                    console.log(`Open ended Q${questionId}: Text length:`, textValue.length);
                 }
             }
         });
@@ -325,77 +324,68 @@ function showAlert(message, type) {
     }, 5000);
 }
 
-// Enhanced Multiple Choice Functionality
-function initMultipleChoiceEnhancements() {
-    console.log('Initializing enhanced multiple choice functionality...');
+// Enhanced Single Selection for All Choice Questions
+function initChoiceQuestionEnhancements() {
+    console.log('Initializing enhanced choice question functionality...');
     
-    // Add visual feedback for multiple selections
-    $('input[type="checkbox"]').on('change', function() {
+    // Add visual feedback for all radio button selections
+    $('input[type="radio"]').on('change', function() {
         const questionContainer = $(this).closest('.question-container');
-        const selectedCount = questionContainer.find('input[type="checkbox"]:checked').length;
-        const totalOptions = questionContainer.find('input[type="checkbox"]').length;
+        const questionType = questionContainer.data('question-type');
+        const selectedValue = $(this).val();
         const questionId = questionContainer.data('question-id');
         
-        console.log(`Question ${questionId}: ${selectedCount}/${totalOptions} options selected`);
+        console.log(`Question ${questionId} (${questionType}): Selected "${selectedValue}"`);
         
-        // Add or update selection counter
-        let counter = questionContainer.find('.selection-counter');
-        if (counter.length === 0) {
-            counter = $('<div class="selection-counter alert alert-info py-2 mt-2"></div>');
-            questionContainer.append(counter);
+        // Add or update selection indicator
+        let indicator = questionContainer.find('.selection-indicator');
+        if (indicator.length === 0) {
+            indicator = $('<div class="selection-indicator alert alert-success py-2 mt-2"></div>');
+            questionContainer.append(indicator);
         }
         
-        if (selectedCount > 0) {
-            counter.html(`
-                <i class="bi bi-check-circle-fill me-2"></i>
-                <strong>${selectedCount}</strong> option${selectedCount !== 1 ? 's' : ''} selected
-                ${selectedCount > 1 ? '<span class="text-success ms-2">(Multiple choices allowed!)</span>' : ''}
-            `).show().removeClass('alert-warning').addClass('alert-info');
-            
-            // Visual feedback for question completion
-            questionContainer.find('.question-text').addClass('text-success');
-            
-            // List selected options
-            const selectedOptions = [];
-            questionContainer.find('input[type="checkbox"]:checked').each(function() {
-                selectedOptions.push($(this).val());
-            });
-            
-            if (selectedCount > 1) {
-                counter.append(`
-                    <div class="mt-2 small">
-                        <strong>Selected:</strong> ${selectedOptions.join(', ')}
-                    </div>
-                `);
-            }
-        } else {
-            counter.html(`
-                <i class="bi bi-info-circle me-2"></i>
-                Select one or more options
-            `).removeClass('alert-info').addClass('alert-warning');
-            questionContainer.find('.question-text').removeClass('text-success');
-        }
-    });
-    
-    // Ensure checkboxes work independently 
-    $('input[type="checkbox"]').each(function() {
-        // Remove any conflicting handlers
-        $(this).off('click.radioLike');
+        // Show selected option
+        indicator.html(`
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Selected:</strong> ${selectedValue}
+            ${questionType === 'multiple_choice' ? '<span class="text-muted ms-2">(Single selection from multiple options)</span>' : ''}
+        `).show();
         
-        // Ensure proper checkbox behavior
-        $(this).on('click', function(e) {
-            // Let the default checkbox behavior work
-            console.log(`Checkbox "${$(this).val()}" clicked. Now checked: ${$(this).is(':checked')}`);
-        });
+        // Visual feedback for question completion
+        questionContainer.find('.question-text').addClass('text-success');
     });
     
-    // Add helpful instructions
-    $('input[type="checkbox"]').first().closest('.question-container').each(function() {
-        if ($(this).find('.multiple-choice-help').length === 0) {
+    // Add helpful instructions for multiple choice questions
+    $('div[data-question-type="multiple_choice"]').each(function() {
+        if ($(this).find('.choice-help').length === 0) {
             $(this).find('.question-text').after(`
-                <div class="multiple-choice-help alert alert-light py-2 mb-3">
+                <div class="choice-help alert alert-light py-2 mb-3">
                     <i class="bi bi-info-circle me-2"></i>
-                    <small><strong>Multiple Choice:</strong> You can select multiple options by checking multiple boxes.</small>
+                    <small><strong>Choose One Option:</strong> Select the single best answer from the options below.</small>
+                </div>
+            `);
+        }
+    });
+    
+    // Add instructions for single choice questions
+    $('div[data-question-type="single_choice"]').each(function() {
+        if ($(this).find('.choice-help').length === 0) {
+            $(this).find('.question-text').after(`
+                <div class="choice-help alert alert-primary py-2 mb-3">
+                    <i class="bi bi-dot me-2"></i>
+                    <small><strong>Single Choice:</strong> Select one option from the choices below.</small>
+                </div>
+            `);
+        }
+    });
+    
+    // Add instructions for scale questions
+    $('div[data-question-type="scale"]').each(function() {
+        if ($(this).find('.choice-help').length === 0) {
+            $(this).find('.question-text').after(`
+                <div class="choice-help alert alert-warning py-2 mb-3">
+                    <i class="bi bi-star me-2"></i>
+                    <small><strong>Rating Scale:</strong> Rate from 1 (strongly disagree) to 5 (strongly agree).</small>
                 </div>
             `);
         }
@@ -404,7 +394,7 @@ function initMultipleChoiceEnhancements() {
 
 // Initialize enhancements when page loads
 $(document).ready(function() {
-    initMultipleChoiceEnhancements();
+    initChoiceQuestionEnhancements();
 });
 </script>
 {% endblock %}

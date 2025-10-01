@@ -180,13 +180,9 @@ def submit_response(id):
             # Handle different question types
             if question.question_type == 'open_ended':
                 answer.answer_text = answer_data
-            elif question.question_type in ['single_choice', 'scale']:
+            elif question.question_type in ['single_choice', 'multiple_choice', 'scale']:
+                # All choice questions now use single selection
                 answer.answer_value = str(answer_data)
-            elif question.question_type == 'multiple_choice':
-                if isinstance(answer_data, list):
-                    answer.set_value_list(answer_data)
-                else:
-                    answer.answer_value = str(answer_data)
             
             db.session.add(answer)
             saved_answers += 1
