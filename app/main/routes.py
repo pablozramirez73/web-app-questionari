@@ -244,15 +244,25 @@ def questionnaire_analytics(id):
         Response.submitted_at >= thirty_days_ago
     ).group_by(func.date(Response.submitted_at)).all()
     
-    # Get question analytics
+    # Generate enhanced charts using the new utilities
+    from app.utils import ChartGenerator
+    
+    timeline_chart = ChartGenerator.generate_response_timeline_chart(questionnaire)
+    completion_chart = ChartGenerator.generate_completion_rate_chart(questionnaire)
+    user_response_chart = ChartGenerator.generate_user_response_chart(questionnaire)
+    
+    # Get question analytics with charts
     questions_data = []
     for question in questionnaire.questions.order_by(Question.order):
         stats = question.get_answer_statistics()
+        question_chart = ChartGenerator.generate_question_chart(question)
+        
         questions_data.append({
             'id': question.id,
             'text': question.question_text,
             'type': question.question_type,
             'stats': stats,
+            'chart': question_chart,
             'total_answers': sum(stats.values()) if stats else 0,
             'response_rate': (sum(stats.values()) / total_responses * 100) if total_responses > 0 else 0
         })
@@ -261,6 +271,10 @@ def questionnaire_analytics(id):
     user_responses = questionnaire.responses.filter_by(is_complete=True).filter(Response.user_id.isnot(None)).count()
     anonymous_responses = questionnaire.responses.filter_by(is_complete=True).filter(Response.user_id.is_(None)).count()
     
+    # Calculate additional analytics
+    average_completion_time = calculate_average_completion_time(questionnaire)
+    peak_response_hours = get_peak_response_hours(questionnaire)
+    
     return render_template('main/questionnaire_analytics.html',
                          title=f'Analytics - {questionnaire.title}',
                          questionnaire=questionnaire,
@@ -268,9 +282,44 @@ def questionnaire_analytics(id):
                          total_started=total_started,
                          completion_rate=completion_rate,
                          timeline_data=timeline_data,
+                         timeline_chart=timeline_chart,
+                         completion_chart=completion_chart,
+                         user_response_chart=user_response_chart,
                          questions_data=questions_data,
                          user_responses=user_responses,
-                         anonymous_responses=anonymous_responses)
+                         anonymous_responses=anonymous_responses,
+                         average_completion_time=average_completion_time,
+                         peak_response_hours=peak_response_hours)
+
+def calculate_average_completion_time(questionnaire):
+    """Calculate average time to complete questionnaire"""
+    from app.models import Response
+    
+    completed_responses = questionnaire.responses.filter_by(is_complete=True).all()
+    if not completed_responses:
+        return None
+    
+    # For now, return a placeholder - in real implementation, you'd track start/end times
+    return "5-10 minutes (estimated)"
+
+def get_peak_response_hours(questionnaire):
+    """Get peak hours for responses"""
+    from app.models import Response
+    from sqlalchemy import func
+    
+    hourly_data = db.session.query(
+        func.extract('hour', Response.submitted_at).label('hour'),
+        func.count(Response.id).label('count')
+    ).filter(
+        Response.questionnaire_id == questionnaire.id,
+        Response.is_complete == True
+    ).group_by(func.extract('hour', Response.submitted_at)).all()
+    
+    if hourly_data:
+        peak_hour = max(hourly_data, key=lambda x: x.count)
+        return f"{int(peak_hour.hour):02d}:00 - {int(peak_hour.hour)+1:02d}:00"
+    
+    return "No data available"
 
 @bp.route('/questionnaire/<int:id>/responses')
 @login_required

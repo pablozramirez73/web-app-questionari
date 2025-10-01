@@ -62,10 +62,10 @@
     </div>
 </div>
 
-<!-- Response Timeline Chart -->
-{% if timeline_data %}
+<!-- Enhanced Charts with Plotly -->
 <div class="row mb-4">
-    <div class="col-12">
+    {% if timeline_chart %}
+    <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">
@@ -73,14 +73,42 @@
                 </h5>
             </div>
             <div class="card-body">
-                <div class="chart-container">
-                    <canvas id="timelineChart"></canvas>
-                </div>
+                <div id="timelineChart" class="chart-container"></div>
             </div>
         </div>
     </div>
+    {% endif %}
+    
+    <div class="col-md-6">
+        {% if completion_chart %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-check-circle me-2"></i>Completion Rate
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="completionChart" class="chart-container"></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-6">
+        {% if user_response_chart %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-people me-2"></i>Response Types
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="userResponseChart" class="chart-container"></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
 </div>
-{% endif %}
 
 <!-- Respondent Demographics -->
 <div class="row mb-4">
@@ -412,6 +440,30 @@ const respondentChart = new Chart(document.getElementById('respondentChart'), {
     {% endif %}
 {% endfor %}
 
+// Initialize Plotly charts
+{% if timeline_chart %}
+const timelineChartData = {{ timeline_chart|safe }};
+Plotly.newPlot('timelineChart', timelineChartData.data, timelineChartData.layout, {responsive: true});
+{% endif %}
+
+{% if completion_chart %}
+const completionChartData = {{ completion_chart|safe }};
+Plotly.newPlot('completionChart', completionChartData.data, completionChartData.layout, {responsive: true});
+{% endif %}
+
+{% if user_response_chart %}
+const userResponseChartData = {{ user_response_chart|safe }};
+Plotly.newPlot('userResponseChart', userResponseChartData.data, userResponseChartData.layout, {responsive: true});
+{% endif %}
+
+// Initialize question-specific Plotly charts
+{% for question in questions_data %}
+{% if question.chart %}
+const questionPlotlyData{{ question.id }} = {{ question.chart|safe }};
+Plotly.newPlot('questionChart{{ question.id }}', questionPlotlyData{{ question.id }}.data, questionPlotlyData{{ question.id }}.layout, {responsive: true});
+{% endif %}
+{% endfor %}
+
 // Refresh Analytics Function
 function refreshAnalytics() {
     location.reload();
@@ -425,4 +477,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- Include Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 {% endblock %}
