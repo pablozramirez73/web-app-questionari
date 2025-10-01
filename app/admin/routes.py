@@ -263,7 +263,7 @@ def system_statistics():
         func.count(Response.id).label('response_count')
     ).join(Response).filter(Response.is_complete == True).group_by(Questionnaire.id).order_by(desc('response_count')).limit(10).all()
     
-     return render_template('admin/statistics.html',
+    return render_template('admin/statistics.html',
                          title='System Statistics',
                          user_growth=user_growth,
                          top_creators=top_creators,
