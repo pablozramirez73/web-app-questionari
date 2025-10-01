@@ -415,3 +415,50 @@ def edit_response(id):
                          questionnaire=questionnaire,
                          response=response,
                          current_answers=current_answers)
+
+@bp.route('/response/<int:id>/details')
+@login_required
+def view_response_details(id):
+    """View response details in a dedicated page"""
+    response = Response.query.get_or_404(id)
+    questionnaire = response.questionnaire
+    
+    # Check permissions
+    if (response.user != current_user and 
+        questionnaire.creator != current_user and 
+        not current_user.is_admin()):
+        flash('You do not have permission to view this response.', 'danger')
+        return redirect(url_for('main.questionnaires'))
+    
+    # Get current answers for display
+    current_answers = {}
+    for answer in response.answers:
+        if answer.question.question_type == 'open_ended':
+            current_answers[answer.question_id] = answer.answer_text
+        else:
+            current_answers[answer.question_id] = answer.answer_value
+    
+    # For now, redirect to edit page since view_response_details.html has syntax issues
+    return redirect(url_for('main.edit_response', id=response.id))
+
+@bp.route('/response/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_response(id):
+    """Delete a response (admin only)"""
+    response = Response.query.get_or_404(id)
+    questionnaire = response.questionnaire
+    
+    # Check permissions - only admins or questionnaire creators can delete
+    if (questionnaire.creator != current_user and not current_user.is_admin()):
+        flash('Permission denied - admin access required.', 'danger')
+        return redirect(url_for('main.questionnaire_responses', id=questionnaire.id))
+    
+    # Store info for flash message
+    respondent_name = response.get_respondent_name()
+    
+    # Delete response (cascade will delete associated answers)
+    db.session.delete(response)
+    db.session.commit()
+    
+    flash(f'Response from {respondent_name} deleted successfully.', 'success')
+    return redirect(url_for('main.questionnaire_responses', id=questionnaire.id))

@@ -212,9 +212,8 @@ def get_response_answers(id):
     for answer in response.answers:
         if answer.question.question_type == 'open_ended':
             answers[answer.question_id] = answer.answer_text
-        elif answer.question.question_type == 'multiple_choice':
-            answers[answer.question_id] = answer.get_value_list()
         else:
+            # All choice questions (single_choice, multiple_choice, scale) now use single values
             answers[answer.question_id] = answer.answer_value
     
     return jsonify({
