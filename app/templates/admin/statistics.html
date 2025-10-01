@@ -275,6 +275,28 @@
                     <a href="{{ url_for('admin.manage_responses') }}" class="btn btn-info">
                         <i class="bi bi-file-earmark-text"></i> View All Responses
                     </a>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-outline-warning dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="bi bi-download"></i> Export JSON
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('main.export_database_json') }}">
+                                    <i class="bi bi-database me-2"></i>Complete Database
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('admin.export_users_json') }}">
+                                    <i class="bi bi-people me-2"></i>Users Only
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('admin.export_questionnaires_json') }}">
+                                    <i class="bi bi-clipboard-data me-2"></i>Questionnaires Only
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                     <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-speedometer2"></i> Back to Dashboard
                     </a>

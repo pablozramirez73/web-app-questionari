@@ -7,6 +7,32 @@
         <p class="text-muted mb-0">System overview and management</p>
     </div>
     <div>
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-outline-info dropdown-toggle btn-sm" data-bs-toggle="dropdown">
+                <i class="bi bi-database-down"></i> Export Database
+            </button>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('main.export_database_json') }}">
+                        <i class="bi bi-file-earmark-code me-2"></i>Complete Database (JSON)
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <h6 class="dropdown-header">Individual Exports</h6>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('admin.export_users_json') }}">
+                        <i class="bi bi-people me-2"></i>Users Only (JSON)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('admin.export_questionnaires_json') }}">
+                        <i class="bi bi-clipboard-data me-2"></i>Questionnaires Only (JSON)
+                    </a>
+                </li>
+            </ul>
+        </div>
         <span class="badge bg-danger fs-6">Administrator</span>
     </div>
 </div>

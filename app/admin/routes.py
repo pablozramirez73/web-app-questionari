@@ -263,8 +263,141 @@ def system_statistics():
         func.count(Response.id).label('response_count')
     ).join(Response).filter(Response.is_complete == True).group_by(Questionnaire.id).order_by(desc('response_count')).limit(10).all()
     
-    return render_template('admin/statistics.html',
+     return render_template('admin/statistics.html',
                          title='System Statistics',
                          user_growth=user_growth,
                          top_creators=top_creators,
                          popular_questionnaires=popular_questionnaires)
+
+@bp.route('/export/users-json')
+@admin_required
+def export_users_json():
+    """Export all users to JSON format"""
+    from flask import make_response
+    import json
+    from datetime import datetime
+    
+    export_data = {
+        'export_info': {
+            'exported_by': current_user.get_full_name(),
+            'exported_at': datetime.utcnow().isoformat(),
+            'export_type': 'users_only',
+            'version': '1.0'
+        },
+        'statistics': {
+            'total_users': User.query.count(),
+            'active_users': User.query.filter_by(is_active=True).count(),
+            'admin_users': User.query.filter_by(role='admin').count()
+        },
+        'users': []
+    }
+    
+    # Export all users with detailed information
+    for user in User.query.order_by('created_at'):
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'full_name': user.get_full_name(),
+            'role': user.role,
+            'is_active': user.is_active,
+            'created_at': user.created_at.isoformat(),
+            'last_login': user.last_login.isoformat() if user.last_login else None,
+            'statistics': {
+                'questionnaires_created': user.created_questionnaires.count(),
+                'active_questionnaires': user.created_questionnaires.filter_by(is_active=True).count(),
+                'responses_submitted': user.responses.filter_by(is_complete=True).count(),
+                'total_responses_received': db.session.query(Response).join(Questionnaire).filter(
+                    Questionnaire.creator_id == user.id,
+                    Response.is_complete == True
+                ).count()
+            }
+        }
+        export_data['users'].append(user_data)
+    
+    # Create JSON response
+    json_output = json.dumps(export_data, indent=2, ensure_ascii=False)
+    
+    response = make_response(json_output)
+    response.headers['Content-Type'] = 'application/json; charset=utf-8'
+    response.headers['Content-Disposition'] = f'attachment; filename=users_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+    
+    return response
+
+@bp.route('/export/questionnaires-json')
+@admin_required
+def export_questionnaires_json():
+    """Export all questionnaires to JSON format"""
+    from flask import make_response
+    import json
+    from datetime import datetime
+    
+    export_data = {
+        'export_info': {
+            'exported_by': current_user.get_full_name(),
+            'exported_at': datetime.utcnow().isoformat(),
+            'export_type': 'questionnaires_only',
+            'version': '1.0'
+        },
+        'statistics': {
+            'total_questionnaires': Questionnaire.query.count(),
+            'active_questionnaires': Questionnaire.query.filter_by(is_active=True).count(),
+            'total_questions': Question.query.count(),
+            'total_responses': Response.query.filter_by(is_complete=True).count()
+        },
+        'questionnaires': []
+    }
+    
+    # Export all questionnaires with questions but without detailed responses
+    for questionnaire in Questionnaire.query.order_by('created_at'):
+        questionnaire_data = {
+            'id': questionnaire.id,
+            'title': questionnaire.title,
+            'description': questionnaire.description,
+            'creator': {
+                'id': questionnaire.creator.id,
+                'username': questionnaire.creator.username,
+                'full_name': questionnaire.creator.get_full_name()
+            },
+            'settings': {
+                'is_active': questionnaire.is_active,
+                'allow_anonymous': questionnaire.allow_anonymous,
+                'multiple_submissions': questionnaire.multiple_submissions
+            },
+            'metadata': {
+                'created_at': questionnaire.created_at.isoformat(),
+                'updated_at': questionnaire.updated_at.isoformat(),
+                'total_questions': questionnaire.get_question_count(),
+                'total_responses': questionnaire.get_total_responses(),
+                'completion_rate': questionnaire.get_completion_rate()
+            },
+            'questions': []
+        }
+        
+        # Export questions for this questionnaire
+        for question in questionnaire.questions.order_by('order'):
+            question_data = {
+                'id': question.id,
+                'order': question.order,
+                'question_text': question.question_text,
+                'question_type': question.question_type,
+                'is_required': question.is_required,
+                'options': question.get_options_list(),
+                'created_at': question.created_at.isoformat(),
+                'statistics': question.get_answer_statistics(),
+                'total_answers': question.answers.count()
+            }
+            questionnaire_data['questions'].append(question_data)
+        
+        export_data['questionnaires'].append(questionnaire_data)
+    
+    # Create JSON response
+    json_output = json.dumps(export_data, indent=2, ensure_ascii=False)
+    
+    response = make_response(json_output)
+    response.headers['Content-Type'] = 'application/json; charset=utf-8'
+    response.headers['Content-Disposition'] = f'attachment; filename=questionnaires_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+    
+    return response
