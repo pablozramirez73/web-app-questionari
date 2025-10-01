@@ -438,8 +438,11 @@ def view_response_details(id):
         else:
             current_answers[answer.question_id] = answer.answer_value
     
-    # For now, redirect to edit page since view_response_details.html has syntax issues
-    return redirect(url_for('main.edit_response', id=response.id))
+    return render_template('main/view_response_details.html',
+                         title=f'Response Details - {questionnaire.title}',
+                         questionnaire=questionnaire,
+                         response=response,
+                         current_answers=current_answers)
 
 @bp.route('/response/<int:id>/delete', methods=['POST'])
 @login_required
