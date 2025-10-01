@@ -312,7 +312,7 @@ function viewResponse(responseId) {
             `;
             
             // Get questionnaire questions to display in order
-            {% for question in questionnaire.questions.order_by('order') %}
+            {% for question in questionnaire.questions %}
                 const answer = data.answers['{{ question.id }}'];
                 html += `
                     <div class="mb-4 border rounded p-3">
@@ -387,8 +387,8 @@ function editResponse(responseId) {
                 <form id="editResponseForm">
             `;
             
-            // Create editable form for each question
-            {% for question in questionnaire.questions.order_by('order') %}
+            // Create editable form for each question  
+            {% for question in questionnaire.questions %}
                 const currentAnswer = data.answers['{{ question.id }}'];
                 html += `
                     <div class="question-edit-container mb-4 border rounded p-3" data-question-id="{{ question.id }}">
