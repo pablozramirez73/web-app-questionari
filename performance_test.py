@@ -8,8 +8,9 @@ import time
 import json
 from concurrent.futures import ThreadPoolExecutor
 import statistics
+import os
 
-BASE_URL = "https://sb-4uc1nby759cn.vercel.run"
+BASE_URL = os.environ.get("BASE_URL", "https://sb-4uc1nby759cn.vercel.run")
 
 def test_endpoint(endpoint, method="GET", data=None, headers=None):
     """Test a single endpoint and return response time"""
