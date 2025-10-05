@@ -2,6 +2,7 @@ from flask import request, jsonify, session
 from flask_login import login_required, current_user
 from flask_wtf.csrf import validate_csrf
 from werkzeug.exceptions import BadRequest
+from datetime import datetime
 from app import db
 from app.api import bp
 from app.models import Questionnaire, Question, Response, Answer
@@ -180,13 +181,9 @@ def submit_response(id):
             # Handle different question types
             if question.question_type == 'open_ended':
                 answer.answer_text = answer_data
-            elif question.question_type in ['single_choice', 'scale']:
+            elif question.question_type in ['single_choice', 'multiple_choice', 'scale']:
+                # All choice questions now use single selection
                 answer.answer_value = str(answer_data)
-            elif question.question_type == 'multiple_choice':
-                if isinstance(answer_data, list):
-                    answer.set_value_list(answer_data)
-                else:
-                    answer.answer_value = str(answer_data)
             
             db.session.add(answer)
             saved_answers += 1
@@ -215,9 +212,8 @@ def get_response_answers(id):
     for answer in response.answers:
         if answer.question.question_type == 'open_ended':
             answers[answer.question_id] = answer.answer_text
-        elif answer.question.question_type == 'multiple_choice':
-            answers[answer.question_id] = answer.get_value_list()
         else:
+            # All choice questions (single_choice, multiple_choice, scale) now use single values
             answers[answer.question_id] = answer.answer_value
     
     return jsonify({
@@ -257,4 +253,99 @@ def get_questionnaire_statistics(id):
         'title': questionnaire.title,
         'total_responses': total_responses,
         'questions_statistics': questions_stats
+    })
+
+@bp.route('/response/<int:id>/update', methods=['PUT'])
+@login_required
+def update_response(id):
+    """Update an existing response"""
+    response = Response.query.get_or_404(id)
+    
+    # Check permissions
+    if (response.user != current_user and 
+        response.questionnaire.creator != current_user and 
+        not current_user.is_admin()):
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    data = request.get_json()
+    answers = data.get('answers', {})
+    
+    if not answers:
+        return jsonify({'error': 'No answers provided'}), 400
+    
+    updated_answers = 0
+    
+    # Update existing answers or create new ones
+    for question_id, answer_data in answers.items():
+        question = Question.query.get(int(question_id))
+        if not question or question.questionnaire_id != response.questionnaire_id:
+            continue
+        
+        # Find existing answer or create new one
+        answer = Answer.query.filter_by(
+            response_id=response.id,
+            question_id=question.id
+        ).first()
+        
+        if not answer:
+            answer = Answer(
+                response_id=response.id,
+                question_id=question.id
+            )
+            db.session.add(answer)
+        
+        # Update answer based on question type
+        if question.question_type == 'open_ended':
+            answer.answer_text = answer_data
+            answer.answer_value = None
+        else:
+            # All choice questions (single_choice, multiple_choice, scale)
+            answer.answer_value = str(answer_data)
+            answer.answer_text = None
+        
+        updated_answers += 1
+    
+    # Remove answers for questions not in the update
+    existing_answer_questions = [int(qid) for qid in answers.keys()]
+    answers_to_remove = Answer.query.filter(
+        Answer.response_id == response.id,
+        ~Answer.question_id.in_(existing_answer_questions)
+    ).all()
+    
+    for answer in answers_to_remove:
+        db.session.delete(answer)
+    
+    # Update response timestamp
+    response.updated_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Response updated successfully',
+        'response_id': response.id,
+        'answers_updated': updated_answers,
+        'answers_removed': len(answers_to_remove)
+    })
+
+@bp.route('/response/<int:id>/delete', methods=['DELETE'])
+@login_required  
+def delete_response(id):
+    """Delete a response (admin only)"""
+    response = Response.query.get_or_404(id)
+    
+    # Check permissions - only admins or questionnaire creators can delete
+    if (response.questionnaire.creator != current_user and not current_user.is_admin()):
+        return jsonify({'error': 'Permission denied - admin access required'}), 403
+    
+    # Store info for response
+    questionnaire_title = response.questionnaire.title
+    respondent_name = response.get_respondent_name()
+    
+    # Delete response (cascade will delete associated answers)
+    db.session.delete(response)
+    db.session.commit()
+    
+    return jsonify({
+        'message': f'Response from {respondent_name} deleted successfully',
+        'questionnaire': questionnaire_title
     })

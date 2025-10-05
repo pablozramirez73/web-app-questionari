@@ -10,9 +10,23 @@
         <a href="{{ url_for('main.questionnaire_responses', id=questionnaire.id) }}" class="btn btn-outline-primary me-2">
             <i class="bi bi-list-ul"></i> View Responses
         </a>
-        <a href="{{ url_for('main.export_questionnaire_data', id=questionnaire.id) }}" class="btn btn-outline-success me-2">
-            <i class="bi bi-download"></i> Export CSV
-        </a>
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="bi bi-download"></i> Export Data
+            </button>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('main.export_questionnaire_data', id=questionnaire.id) }}">
+                        <i class="bi bi-file-earmark-spreadsheet me-2"></i>Export CSV
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('main.export_questionnaire_json', id=questionnaire.id) }}">
+                        <i class="bi bi-file-earmark-code me-2"></i>Export JSON
+                    </a>
+                </li>
+            </ul>
+        </div>
         <a href="{{ url_for('main.edit_questionnaire', id=questionnaire.id) }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back to Editor
         </a>

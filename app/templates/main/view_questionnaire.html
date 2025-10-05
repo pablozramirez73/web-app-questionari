@@ -74,7 +74,10 @@
                     
                     <form id="response-form" method="POST" action="{{ url_for('api.submit_response', id=questionnaire.id) }}">
                         {% for question in questionnaire.questions %}
-                            <div class="question-container" data-question-id="{{ question.id }}" data-required="{{ question.is_required|lower }}">
+                            <div class="question-container" 
+                                 data-question-id="{{ question.id }}" 
+                                 data-required="{{ question.is_required|lower }}"
+                                 data-question-type="{{ question.question_type }}">
                                 <div class="question-text">
                                     {{ question.question_text }}
                                     {% if question.is_required %}
@@ -102,7 +105,7 @@
                                         {% for option in question.get_options_list() %}
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" 
-                                                       name="question_{{ question.id }}" 
+                                                       name="question_{{ question.id }}[]" 
                                                        value="{{ option }}" 
                                                        id="q{{ question.id }}_{{ loop.index }}">
                                                 <label class="form-check-label" for="q{{ question.id }}_{{ loop.index }}">
@@ -225,18 +228,16 @@ $(document).ready(function() {
             
             const questionType = $(this).find('input').first().attr('type');
             
-            if (questionType === 'checkbox') {
-                // Multiple choice
-                const values = [];
-                $(this).find('input:checked').each(function() {
-                    values.push($(this).val());
-                });
-                if (values.length > 0) {
-                    formData[questionId] = values;
-                }
-            } else if (questionType === 'radio') {
-                // Single choice or scale
+            if (questionType === 'radio') {
+                // All choice questions (single_choice, multiple_choice, scale) use radio buttons for single selection
                 const checkedValue = $(this).find('input:checked').val();
+                if (checkedValue) {
+                    formData[questionId] = checkedValue;
+                    console.log(`Choice question Q${questionId}: Selected:`, checkedValue);
+                }
+            } else if (questionType === 'checkbox') {
+                // Legacy checkbox handling (should not be used anymore)
+                const checkedValue = $(this).find('input:checked').first().val();
                 if (checkedValue) {
                     formData[questionId] = checkedValue;
                 }
@@ -245,6 +246,7 @@ $(document).ready(function() {
                 const textValue = $(this).find('textarea').val().trim();
                 if (textValue) {
                     formData[questionId] = textValue;
+                    console.log(`Open ended Q${questionId}: Text length:`, textValue.length);
                 }
             }
         });
@@ -321,5 +323,78 @@ function showAlert(message, type) {
         });
     }, 5000);
 }
+
+// Enhanced Single Selection for All Choice Questions
+function initChoiceQuestionEnhancements() {
+    console.log('Initializing enhanced choice question functionality...');
+    
+    // Add visual feedback for all radio button selections
+    $('input[type="radio"]').on('change', function() {
+        const questionContainer = $(this).closest('.question-container');
+        const questionType = questionContainer.data('question-type');
+        const selectedValue = $(this).val();
+        const questionId = questionContainer.data('question-id');
+        
+        console.log(`Question ${questionId} (${questionType}): Selected "${selectedValue}"`);
+        
+        // Add or update selection indicator
+        let indicator = questionContainer.find('.selection-indicator');
+        if (indicator.length === 0) {
+            indicator = $('<div class="selection-indicator alert alert-success py-2 mt-2"></div>');
+            questionContainer.append(indicator);
+        }
+        
+        // Show selected option
+        indicator.html(`
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Selected:</strong> ${selectedValue}
+            ${questionType === 'multiple_choice' ? '<span class="text-muted ms-2">(Single selection from multiple options)</span>' : ''}
+        `).show();
+        
+        // Visual feedback for question completion
+        questionContainer.find('.question-text').addClass('text-success');
+    });
+    
+    // Add helpful instructions for multiple choice questions
+    $('div[data-question-type="multiple_choice"]').each(function() {
+        if ($(this).find('.choice-help').length === 0) {
+            $(this).find('.question-text').after(`
+                <div class="choice-help alert alert-light py-2 mb-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <small><strong>Choose One Option:</strong> Select the single best answer from the options below.</small>
+                </div>
+            `);
+        }
+    });
+    
+    // Add instructions for single choice questions
+    $('div[data-question-type="single_choice"]').each(function() {
+        if ($(this).find('.choice-help').length === 0) {
+            $(this).find('.question-text').after(`
+                <div class="choice-help alert alert-primary py-2 mb-3">
+                    <i class="bi bi-dot me-2"></i>
+                    <small><strong>Single Choice:</strong> Select one option from the choices below.</small>
+                </div>
+            `);
+        }
+    });
+    
+    // Add instructions for scale questions
+    $('div[data-question-type="scale"]').each(function() {
+        if ($(this).find('.choice-help').length === 0) {
+            $(this).find('.question-text').after(`
+                <div class="choice-help alert alert-warning py-2 mb-3">
+                    <i class="bi bi-star me-2"></i>
+                    <small><strong>Rating Scale:</strong> Rate from 1 (strongly disagree) to 5 (strongly agree).</small>
+                </div>
+            `);
+        }
+    });
+}
+
+// Initialize enhancements when page loads
+$(document).ready(function() {
+    initChoiceQuestionEnhancements();
+});
 </script>
 {% endblock %}

@@ -202,7 +202,7 @@ function createQuestionHTML(order) {
     `);
 }
 
-// Response Form Functions
+// Response Form Functions - Enhanced for Multiple Choice
 function initResponseForm() {
     // Auto-save responses (optional feature)
     let saveTimeout;
@@ -217,6 +217,22 @@ function initResponseForm() {
     // Progress tracking
     updateProgress();
     $('input, textarea, select').on('change', updateProgress);
+    
+    // Enhanced checkbox behavior for multiple choice
+    $('.form-check-input[type="checkbox"]').on('change', function() {
+        const questionContainer = $(this).closest('.question-container');
+        const questionId = questionContainer.data('question-id');
+        const selectedOptions = questionContainer.find('input[type="checkbox"]:checked');
+        
+        console.log(`Question ${questionId}: ${selectedOptions.length} options selected`);
+        
+        // Visual feedback for multiple selections
+        if (selectedOptions.length > 1) {
+            questionContainer.find('.question-text').addClass('text-success');
+        } else {
+            questionContainer.find('.question-text').removeClass('text-success');
+        }
+    });
     
     // Form submission with validation
     $('#response-form').on('submit', function(e) {
