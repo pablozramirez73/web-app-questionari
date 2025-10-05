@@ -104,8 +104,8 @@
                                     <div class="mt-3">
                                         {% for option in question.get_options_list() %}
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" 
-                                                       name="question_{{ question.id }}" 
+                                                <input class="form-check-input" type="checkbox" 
+                                                       name="question_{{ question.id }}[]" 
                                                        value="{{ option }}" 
                                                        id="q{{ question.id }}_{{ loop.index }}">
                                                 <label class="form-check-label" for="q{{ question.id }}_{{ loop.index }}">
